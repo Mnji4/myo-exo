@@ -2,6 +2,8 @@
 
 This repository is the compact code snapshot for the 2D MyoAssist/MJWarp muscle-control experiments. It keeps the runnable training code, staged configs, reference builders, small reference datasets, and analysis scripts. Large experiment outputs, checkpoints, TensorBoard logs, and rendered rollout videos are intentionally excluded.
 
+Chinese handover notes: [`docs/handover_zh.md`](docs/handover_zh.md)
+
 ## Repository Layout
 
 - `cleanrl/`: self-contained PPO/SAC-style MJWarp training code for 22-muscle 2D MyoAssist control.
@@ -67,4 +69,3 @@ Older configs that referenced excluded `results/` or `results_old/` generated re
 - model checkpoints: `*.pt`, `*.pth`, `*.ckpt`
 - TensorBoard/event logs
 - local secrets and machine-specific credentials
-
