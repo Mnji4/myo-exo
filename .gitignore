@@ -1,0 +1,36 @@
+# Python/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local environments
+.env
+.venv/
+venv/
+env/
+
+# Experiment outputs
+results/
+results_old/
+video_exports/
+reference_videos/
+runs/
+wandb/
+generated_models/
+MUJOCO_LOG.TXT
+
+# Large learned artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.zip
+events.out.tfevents*
+
+# Local secrets
+*token*
+*secret*
+*.pem
+*.key
+

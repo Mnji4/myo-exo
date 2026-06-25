@@ -1,0 +1,156 @@
+{
+  "datasets": [
+    {
+      "path": "reference_exports/synergy_datasets/uphill9_step999424_phase12plus.npz",
+      "label": "uphill9_step999424_phase12plus",
+      "global_step": 999424,
+      "samples": 960,
+      "phase_start": 12,
+      "phase_end": null
+    }
+  ],
+  "threshold": 0.55,
+  "matrix": "combined",
+  "groups": [
+    {
+      "indices": [
+        2,
+        10,
+        13,
+        21
+      ],
+      "names": [
+        "edl_r",
+        "tibant_r",
+        "edl_l",
+        "tibant_l"
+      ]
+    },
+    {
+      "indices": [
+        0,
+        11
+      ],
+      "names": [
+        "hamstrings_r",
+        "hamstrings_l"
+      ]
+    },
+    {
+      "indices": [
+        6,
+        17
+      ],
+      "names": [
+        "rectfem_r",
+        "rectfem_l"
+      ]
+    },
+    {
+      "indices": [
+        15,
+        16
+      ],
+      "names": [
+        "glutmax_l",
+        "iliopsoas_l"
+      ]
+    },
+    {
+      "indices": [
+        1
+      ],
+      "names": [
+        "bifemsh_r"
+      ]
+    },
+    {
+      "indices": [
+        3
+      ],
+      "names": [
+        "fdl_r"
+      ]
+    },
+    {
+      "indices": [
+        4
+      ],
+      "names": [
+        "glutmax_r"
+      ]
+    },
+    {
+      "indices": [
+        5
+      ],
+      "names": [
+        "iliopsoas_r"
+      ]
+    },
+    {
+      "indices": [
+        7
+      ],
+      "names": [
+        "vasti_r"
+      ]
+    },
+    {
+      "indices": [
+        8
+      ],
+      "names": [
+        "gastroc_r"
+      ]
+    },
+    {
+      "indices": [
+        9
+      ],
+      "names": [
+        "soleus_r"
+      ]
+    },
+    {
+      "indices": [
+        12
+      ],
+      "names": [
+        "bifemsh_l"
+      ]
+    },
+    {
+      "indices": [
+        14
+      ],
+      "names": [
+        "fdl_l"
+      ]
+    },
+    {
+      "indices": [
+        18
+      ],
+      "names": [
+        "vasti_l"
+      ]
+    },
+    {
+      "indices": [
+        19
+      ],
+      "names": [
+        "gastroc_l"
+      ]
+    },
+    {
+      "indices": [
+        20
+      ],
+      "names": [
+        "soleus_l"
+      ]
+    }
+  ]
+}

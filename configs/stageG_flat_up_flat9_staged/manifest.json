@@ -1,0 +1,162 @@
+[
+  {
+    "stage": "stageG_fuf9_A_h48_islands_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_A_h48_islands_imit_sac.json",
+    "episode_steps": 48,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 48
+      },
+      {
+        "start": 140,
+        "end": 188
+      },
+      {
+        "start": 333,
+        "end": 381
+      }
+    ],
+    "total_timesteps": 196608,
+    "initial_foot_slip_weight": 0.0,
+    "later_foot_slip_weight": 0.0
+  },
+  {
+    "stage": "stageG_fuf9_B_h48_transition_short_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_B_h48_transition_short_imit_sac.json",
+    "episode_steps": 48,
+    "phase_windows": [
+      {
+        "start": 64,
+        "end": 112
+      },
+      {
+        "start": 246,
+        "end": 309
+      },
+      {
+        "start": 124,
+        "end": 172
+      },
+      {
+        "start": 333,
+        "end": 381
+      }
+    ],
+    "total_timesteps": 262144,
+    "initial_foot_slip_weight": 0.0,
+    "later_foot_slip_weight": 0.01
+  },
+  {
+    "stage": "stageG_fuf9_C_h72_transition_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_C_h72_transition_imit_sac.json",
+    "episode_steps": 72,
+    "phase_windows": [
+      {
+        "start": 48,
+        "end": 124
+      },
+      {
+        "start": 224,
+        "end": 318
+      },
+      {
+        "start": 132,
+        "end": 193
+      },
+      {
+        "start": 201,
+        "end": 261
+      },
+      {
+        "start": 333,
+        "end": 387
+      }
+    ],
+    "total_timesteps": 393216,
+    "initial_foot_slip_weight": 0.01,
+    "later_foot_slip_weight": 0.02
+  },
+  {
+    "stage": "stageG_fuf9_D_h96_mixed_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_D_h96_mixed_imit_sac.json",
+    "episode_steps": 96,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 124
+      },
+      {
+        "start": 96,
+        "end": 124
+      },
+      {
+        "start": 132,
+        "end": 193
+      },
+      {
+        "start": 201,
+        "end": 294
+      },
+      {
+        "start": 240,
+        "end": 363
+      },
+      {
+        "start": 333,
+        "end": 363
+      }
+    ],
+    "total_timesteps": 393216,
+    "initial_foot_slip_weight": 0.02,
+    "later_foot_slip_weight": 0.03
+  },
+  {
+    "stage": "stageG_fuf9_E_h144_long_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_E_h144_long_imit_sac.json",
+    "episode_steps": 144,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 124
+      },
+      {
+        "start": 96,
+        "end": 124
+      },
+      {
+        "start": 132,
+        "end": 261
+      },
+      {
+        "start": 216,
+        "end": 333
+      }
+    ],
+    "total_timesteps": 524288,
+    "initial_foot_slip_weight": 0.03,
+    "later_foot_slip_weight": 0.04
+  },
+  {
+    "stage": "stageG_fuf9_F_h192_full_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_F_h192_full_imit_sac.json",
+    "episode_steps": 192,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 96
+      },
+      {
+        "start": 96,
+        "end": 267
+      },
+      {
+        "start": 240,
+        "end": 267
+      }
+    ],
+    "total_timesteps": 524288,
+    "initial_foot_slip_weight": 0.04,
+    "later_foot_slip_weight": 0.05
+  }
+]

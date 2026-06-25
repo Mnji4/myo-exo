@@ -1,0 +1,297 @@
+{
+  "experiment_name": "muscle_2d_mjwarp_stageF_slopedescent_h192_terrainpreview32_from409k_sac",
+  "seed": 2026,
+  "model": {
+    "source_xml": "/home/lzn/myoassist/models/22muscle_2D/myoLeg22_2D_BASELINE.xml",
+    "disable_multiccd": true
+  },
+  "control": {
+    "control_hz": 30,
+    "physics_hz": 1000,
+    "frame_skip": 33
+  },
+  "reference_pool": {
+    "paths": [
+      "/home/lzn/exoskeleton_terrain/data/camargo_reference_selected_contact_aligned/camargo_ab06_levelwalking_walk_selected_contact_aligned_myoassist_3d.npz",
+      "/home/lzn/exoskeleton_terrain/data/camargo_reference_selected_contact_aligned/camargo_ab06_slopedescent_rampdescent_selected_contact_aligned_myoassist_3d.npz",
+      "data/camargo_transition_references/camargo_ab06_slopedescent_walk-rampdescent_transition_myoassist_3d.npz",
+      "data/camargo_transition_references/camargo_ab06_slopedescent_rampdescent-walk_transition_myoassist_3d.npz"
+    ]
+  },
+  "reference_pool_schedule": [
+    {
+      "name": "level_and_slopedescent",
+      "after_steps": 0,
+      "references": [
+        "levelwalking",
+        "slopedescent:rampdescent",
+        "slopedescent:walk-rampdescent",
+        "slopedescent:rampdescent-walk"
+      ]
+    }
+  ],
+  "terrain_context": {
+    "include_height_preview": true,
+    "num_preview_samples": 32,
+    "preview_start_m": -0.1,
+    "preview_end_m": 1.5,
+    "height_scale": 0.2
+  },
+  "terrain_course": {
+    "enabled": true,
+    "hfield_name": "terrain",
+    "terrain_geom": "terrain",
+    "terrain_geom_z": 0.0,
+    "terrain_rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "add_stair_box_contact_pairs": false,
+    "lower_ground_plane": false,
+    "ground_geom": "ground-plane",
+    "ground_plane_alpha": 0.0,
+    "ground_plane_z": -10.0,
+    "segments": [
+      {
+        "type": "flat",
+        "x0": -20.0,
+        "x1": 10.0,
+        "height": 0.0
+      },
+      {
+        "type": "flat",
+        "x0": 10.0,
+        "x1": 12.0,
+        "height": 0.42465775
+      },
+      {
+        "type": "slope",
+        "x0": 12.0,
+        "x1": 14.619888,
+        "height0": 0.42465775,
+        "slope": -0.16209004
+      },
+      {
+        "type": "flat",
+        "x0": 14.619888,
+        "x1": 90.0,
+        "height": 0.0
+      }
+    ]
+  },
+  "video": {
+    "phase_indices": [
+      0,
+      117,
+      183,
+      219
+    ]
+  },
+  "checkpoint_video_export": {
+    "enabled": true,
+    "every_steps": 16384,
+    "device": "cpu",
+    "video_steps": 160,
+    "video_height": 720,
+    "video_width": 1280,
+    "video_camera_distance": 6.0,
+    "video_camera_height": 0.9,
+    "min_available_memory_gb": 2.0,
+    "phase_indices": [
+      0,
+      117,
+      183,
+      219
+    ]
+  },
+  "reset": {
+    "keyframe": "walk_left",
+    "episode_steps": 192,
+    "safe_pelvis_height": 0.5,
+    "max_abs_pelvis_tilt": 0.65,
+    "max_abs_pelvis_tilt_error": 0.8,
+    "max_abs_qvel": 80.0,
+    "initial_activation": 0.05,
+    "initial_activation_range": [
+      0.03,
+      0.08
+    ],
+    "phase_start": 0,
+    "phase_end": 0,
+    "phase_indices": [],
+    "phase_index_jitter": 0,
+    "qpos_noise": 0.0025,
+    "qvel_noise": 0.004
+  },
+  "imitation": {
+    "foot_x_scale": 0.18,
+    "foot_z_scale": 0.04,
+    "pelvis_tx_vel_scale": 0.5,
+    "reference_future_steps": 5,
+    "reference_reward_future_steps": 3,
+    "reference_swing_foot_weight": 8.0,
+    "future_obs_dropout_prob": 0.0,
+    "current_future_obs_dropout_prob": 0.0,
+    "joint_pose_weights": {
+      "pelvis_ty": 4.0,
+      "pelvis_tilt": 3.0,
+      "hip_flexion_r": 2.0,
+      "knee_angle_r": 3.0,
+      "ankle_angle_r": 2.0,
+      "mtp_angle_r": 0.0,
+      "hip_flexion_l": 2.0,
+      "knee_angle_l": 3.0,
+      "ankle_angle_l": 2.0,
+      "mtp_angle_l": 0.0
+    },
+    "joint_vel_weights": {
+      "pelvis_ty": 4.0,
+      "pelvis_tilt": 3.0,
+      "hip_flexion_r": 2.0,
+      "knee_angle_r": 3.0,
+      "ankle_angle_r": 2.0,
+      "mtp_angle_r": 0.0,
+      "hip_flexion_l": 2.0,
+      "knee_angle_l": 3.0,
+      "ankle_angle_l": 2.0,
+      "mtp_angle_l": 0.0
+    },
+    "foot_site_weights": {
+      "r_heel_btm": 1.0,
+      "r_toe_btm": 1.0,
+      "l_heel_btm": 1.0,
+      "l_toe_btm": 1.0
+    }
+  },
+  "activation_prior": {
+    "enabled": false,
+    "path": "",
+    "execution_mix": 0.0
+  },
+  "emg_prior": {
+    "enabled": false,
+    "path": "",
+    "bc_weight": 0.0
+  },
+  "reference_contact": {
+    "z_threshold": 0.025,
+    "speed_threshold": 0.4,
+    "z_scale": 0.04,
+    "slip_scale": 0.08,
+    "course_clearance_target": 0.0,
+    "course_min_clearance": 0.0,
+    "max_course_vertical_correction": 0.8,
+    "course_correction_smoothing_window": 1,
+    "max_course_vertical_correction_step": 0.04
+  },
+  "heuristic_reward": {
+    "swing_knee_flex_target": 0.45,
+    "swing_knee_flex_scale": 0.25,
+    "swing_hip_flex_target": 0.3,
+    "swing_hip_flex_scale": 0.35,
+    "swing_foot_forward_target": 0.35,
+    "swing_foot_forward_scale": 0.35
+  },
+  "muscle_bias": {
+    "enabled": false,
+    "scale": 0.0,
+    "swing_add": {},
+    "swing_add_late": {},
+    "swing_sub": {}
+  },
+  "reference_curriculum": {
+    "phase_lead_steps": 0,
+    "phase_tolerance_steps": 0,
+    "swing_exaggeration_scale": 1.0
+  },
+  "reward_schedule_mode": "relative",
+  "reward": {
+    "tracking_qpos_penalty": 8.0,
+    "tracking_qvel_penalty": 0.25,
+    "tracking_foot_site_penalty": 5.0,
+    "tracking_swing_foot_site_penalty": 16.0,
+    "tracking_swing_hip_penalty": 0.0,
+    "tracking_swing_limb_penalty": 2.0,
+    "tracking_activation_symmetry_penalty": 0.0,
+    "tracking_future_foot_site_penalty": 5.0,
+    "terminal_swing_landing_penalty": 10.0,
+    "tracking_pelvis_penalty": 14.0,
+    "pelvis_tx_vel_ref": 4.0,
+    "foot_slip": 0.15,
+    "tracking_energy_penalty": 0.08,
+    "activation_smooth": 2.0,
+    "upright": 1.0,
+    "height": 1.0,
+    "alive": 0.0,
+    "fall": 4.0
+  },
+  "reward_schedule": [
+    {
+      "after_steps": 65536,
+      "weights": {
+        "tracking_qpos_penalty": 7.0,
+        "tracking_qvel_penalty": 0.3,
+        "tracking_foot_site_penalty": 5.0,
+        "tracking_swing_foot_site_penalty": 14.0,
+        "tracking_swing_limb_penalty": 1.0,
+        "tracking_activation_symmetry_penalty": 0.0,
+        "tracking_future_foot_site_penalty": 4.0,
+        "terminal_swing_landing_penalty": 8.0,
+        "tracking_pelvis_penalty": 16.0,
+        "pelvis_tx_vel_ref": 5.0,
+        "foot_slip": 0.2,
+        "tracking_energy_penalty": 0.09,
+        "activation_smooth": 2.25,
+        "upright": 1.5,
+        "height": 1.5,
+        "fall": 6.0
+      }
+    },
+    {
+      "after_steps": 196608,
+      "weights": {
+        "tracking_qpos_penalty": 6.0,
+        "tracking_qvel_penalty": 0.3,
+        "tracking_foot_site_penalty": 4.0,
+        "tracking_swing_foot_site_penalty": 12.0,
+        "tracking_swing_limb_penalty": 1.0,
+        "tracking_activation_symmetry_penalty": 0.0,
+        "tracking_future_foot_site_penalty": 3.0,
+        "terminal_swing_landing_penalty": 6.0,
+        "tracking_pelvis_penalty": 18.0,
+        "pelvis_tx_vel_ref": 6.0,
+        "foot_slip": 0.25,
+        "tracking_energy_penalty": 0.1,
+        "activation_smooth": 2.5,
+        "upright": 2.0,
+        "height": 2.0,
+        "fall": 8.0
+      }
+    }
+  ],
+  "sac": {
+    "total_timesteps": 917504,
+    "num_envs": 64,
+    "buffer_size": 250000,
+    "learning_starts": 1024,
+    "batch_size": 1024,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "learning_rate": 0.0003,
+    "policy_lr": 0.0003,
+    "q_lr": 0.0003,
+    "alpha_lr": 0.0003,
+    "gamma": 0.99,
+    "tau": 0.005,
+    "alpha": 0.08,
+    "target_entropy": -8.0,
+    "max_grad_norm": 10.0,
+    "normalize_observations": true,
+    "obs_norm_clip": 10.0,
+    "actor_logstd_init": -1.1,
+    "initial_actor_action_mean": -0.2,
+    "symmetric_policy": true
+  }
+}

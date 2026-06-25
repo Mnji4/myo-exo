@@ -1,0 +1,24 @@
+[
+  {
+    "stage": "stageG_fuf9_G_h288_long_imit_sac",
+    "config": "configs/stageG_flat_up_flat9_staged/muscle_2d_mjwarp_stageG_fuf9_G_h288_long_imit_sac.json",
+    "episode_steps": 288,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 96
+      },
+      {
+        "start": 48,
+        "end": 171
+      },
+      {
+        "start": 96,
+        "end": 171
+      }
+    ],
+    "total_timesteps": 393216,
+    "initial_foot_slip_weight": 0.04,
+    "later_foot_slip_weight": 0.04
+  }
+]

@@ -1,0 +1,196 @@
+{
+  "experiment_name": "muscle_2d_mjwarp_curriculum_v1",
+  "seed": 2026,
+  "model": {
+    "source_xml": "/home/lzn/myoassist/models/22muscle_2D/myoLeg22_2D_BASELINE.xml",
+    "disable_multiccd": true
+  },
+  "control": {
+    "control_hz": 30,
+    "physics_hz": 1000,
+    "frame_skip": 33
+  },
+  "reset": {
+    "keyframe": "walk_left",
+    "episode_steps": 48,
+    "safe_pelvis_height": 0.5,
+    "max_abs_pelvis_tilt": 0.65,
+    "max_abs_pelvis_tilt_error": 0.8,
+    "max_abs_qvel": 80.0,
+    "initial_activation": 0.05,
+    "phase_start": 0,
+    "phase_end": 0,
+    "phase_windows": [
+      {"start": 344, "end": 392},
+      {"start": 762, "end": 810},
+      {"start": 1427, "end": 1475},
+      {"start": 2010, "end": 2058}
+    ],
+    "qpos_noise": 0.001,
+    "qvel_noise": 0.005
+  },
+  "imitation": {
+    "foot_x_scale": 0.18,
+    "foot_z_scale": 0.04,
+    "pelvis_tx_vel_scale": 0.5,
+    "joint_pose_weights": {
+      "pelvis_ty": 1.5,
+      "pelvis_tilt": 4.0,
+      "hip_flexion_r": 12.0,
+      "knee_angle_r": 2.0,
+      "ankle_angle_r": 1.5,
+      "mtp_angle_r": 1.5,
+      "hip_flexion_l": 12.0,
+      "knee_angle_l": 2.0,
+      "ankle_angle_l": 1.5,
+      "mtp_angle_l": 1.5
+    },
+    "joint_vel_weights": {
+      "pelvis_ty": 0.25,
+      "pelvis_tilt": 1.5,
+      "hip_flexion_r": 5.0,
+      "knee_angle_r": 1.0,
+      "ankle_angle_r": 0.75,
+      "mtp_angle_r": 0.5,
+      "hip_flexion_l": 5.0,
+      "knee_angle_l": 1.0,
+      "ankle_angle_l": 0.75,
+      "mtp_angle_l": 0.5
+    },
+    "foot_site_weights": {
+      "r_heel_btm": 2.0,
+      "r_toe_btm": 2.0,
+      "l_heel_btm": 2.0,
+      "l_toe_btm": 2.0
+    }
+  },
+  "activation_prior": {
+    "enabled": false,
+    "path": "data/myoassist_teacher_prior_swing_limb_symmetry24_h48.npz",
+    "key": "target_activations",
+    "index_key": "reference_indices",
+    "source_scale": "activation01",
+    "execution_mix": 0.0
+  },
+  "emg_prior": {
+    "enabled": true,
+    "path": "/home/lzn/myoassist/ctrl_optim/optim/ref_data/ref_EMG.csv",
+    "cycle_steps": 100,
+    "phase_offset": 0,
+    "right_phase_offset": 0,
+    "left_phase_offset": 50,
+    "bc_weight": 0.05
+  },
+  "reference_contact": {
+    "z_threshold": 0.025,
+    "speed_threshold": 0.4,
+    "z_scale": 0.04,
+    "slip_scale": 0.08
+  },
+  "heuristic_reward": {
+    "swing_knee_flex_target": 0.45,
+    "swing_knee_flex_scale": 0.25,
+    "swing_hip_flex_target": 0.3,
+    "swing_hip_flex_scale": 0.35,
+    "swing_foot_forward_target": 0.35,
+    "swing_foot_forward_scale": 0.35
+  },
+  "muscle_bias": {
+    "enabled": true,
+    "scale": 1.0,
+    "late_hip_threshold": 0.0,
+    "swing_add": {
+      "iliopsoas": 0.9,
+      "bifemsh": 0.20,
+      "tibant": 0.12
+    },
+    "swing_add_late": {
+      "rectfem": 0.30,
+      "vasti": 0.18
+    },
+    "swing_sub": {
+      "glutmax": 0.50,
+      "hamstrings": 0.12,
+      "soleus": 0.12,
+      "gastroc": 0.10
+    }
+  },
+  "reference_curriculum": {
+    "phase_lead_steps": 6,
+    "phase_tolerance_steps": 0,
+    "swing_exaggeration_scale": 2.0,
+    "phase_lead_schedule": {
+      "start": 6,
+      "final": 2,
+      "decay_updates": 64
+    },
+    "phase_tolerance_schedule": {
+      "start": 0,
+      "final": 0,
+      "decay_updates": 1
+    },
+    "swing_exaggeration_schedule": {
+      "start": 2.0,
+      "final": 1.2,
+      "decay_updates": 64
+    }
+  },
+  "reward": {
+    "ref_pose": 0.0,
+    "ref_vel": 0.25,
+    "pelvis_pose_ref": 0.5,
+    "hip_pose_ref": 3.0,
+    "knee_pose_ref": 8.0,
+    "knee_vel_ref": 2.0,
+    "ankle_pose_ref": 0.25,
+    "mtp_pose_ref": 0.25,
+    "foot_z_ref": 1.0,
+    "foot_x_ref": 0.0,
+    "ref_stance_foot_z": 0.0,
+    "ref_swing_foot_z": 4.0,
+    "ref_swing_hip_pose": 4.0,
+    "ref_swing_knee_pose": 12.0,
+    "ref_swing_knee_vel": 4.0,
+    "knee_abs_err": 1.0,
+    "swing_knee_abs_err": 2.0,
+    "swing_knee_vel_abs_err": 0.05,
+    "swing_knee_flex_heuristic": 8.0,
+    "swing_hip_flex_heuristic": 110.0,
+    "swing_foot_forward_heuristic": 140.0,
+    "swing_knee_flex_angle": 4.0,
+    "swing_hip_flex_angle": 140.0,
+    "swing_foot_forward_delta": 240.0,
+    "pelvis_tx_vel_ref": 0.2,
+    "foot_slip": 0.0,
+    "activation_l2": 0.0,
+    "activation_smooth": 0.0,
+    "upright": 0.2,
+    "height": 0.2,
+    "alive": 0.1,
+    "fall": 20.0
+  },
+  "ppo": {
+    "total_timesteps": 1048576,
+    "num_envs": 256,
+    "num_steps": 128,
+    "learning_rate": 0.0001,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "num_minibatches": 8,
+    "update_epochs": 2,
+    "clip_coef": 0.2,
+    "ent_coef": 0.005,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "normalize_observations": true,
+    "obs_norm_clip": 10.0,
+    "actor_logstd_init": -0.3,
+    "initial_actor_action_mean": -0.2,
+    "activation_prior_pretrain_batches": 0,
+    "activation_prior_pretrain_lr": 0.003,
+    "activation_prior_bc_weight": 0.0,
+    "activation_prior_bc_final_weight": 0.0,
+    "activation_prior_bc_decay_updates": 0,
+    "checkpoint_every_updates": 16
+  }
+}

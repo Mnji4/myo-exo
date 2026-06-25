@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "stageG_up9fl035_B_h24_imit_sac_autovideo_phase0_resume_from_319488",
+    "config": "configs/stageG_uphill9_footlocked035_clip_staged/muscle_2d_mjwarp_stageG_up9fl035_B_h24_imit_sac_autovideo_phase0.json",
+    "episode_steps": 24,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 47
+      }
+    ],
+    "total_timesteps": 73728,
+    "reference_length": 70,
+    "initial_foot_slip_weight": 0.0,
+    "later_foot_slip_weight": 0.0
+  },
+  {
+    "stage": "stageG_up9fl035_C_h36_imit_sac",
+    "config": "configs/stageG_uphill9_footlocked035_clip_staged/muscle_2d_mjwarp_stageG_up9fl035_C_h36_imit_sac.json",
+    "episode_steps": 36,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 35
+      }
+    ],
+    "total_timesteps": 393216,
+    "reference_length": 70,
+    "initial_foot_slip_weight": 0.0,
+    "later_foot_slip_weight": 0.01
+  },
+  {
+    "stage": "stageG_up9fl035_D_h48_imit_sac",
+    "config": "configs/stageG_uphill9_footlocked035_clip_staged/muscle_2d_mjwarp_stageG_up9fl035_D_h48_imit_sac.json",
+    "episode_steps": 48,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 23
+      }
+    ],
+    "total_timesteps": 393216,
+    "reference_length": 70,
+    "initial_foot_slip_weight": 0.01,
+    "later_foot_slip_weight": 0.02
+  },
+  {
+    "stage": "stageG_up9fl035_E_h60_imit_sac",
+    "config": "configs/stageG_uphill9_footlocked035_clip_staged/muscle_2d_mjwarp_stageG_up9fl035_E_h60_imit_sac.json",
+    "episode_steps": 60,
+    "phase_windows": [
+      {
+        "start": 0,
+        "end": 11
+      }
+    ],
+    "total_timesteps": 393216,
+    "reference_length": 70,
+    "initial_foot_slip_weight": 0.02,
+    "later_foot_slip_weight": 0.03
+  }
+]

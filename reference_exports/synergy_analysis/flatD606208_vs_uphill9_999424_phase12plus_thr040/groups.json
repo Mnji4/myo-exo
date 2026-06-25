@@ -1,0 +1,152 @@
+{
+  "datasets": [
+    {
+      "path": "reference_exports/synergy_datasets/flat_stageD_step606208.npz",
+      "label": "flat_stageD_step606208",
+      "global_step": 606208,
+      "samples": 4096,
+      "phase_start": 0,
+      "phase_end": null
+    },
+    {
+      "path": "reference_exports/synergy_datasets/uphill9_step999424_phase12plus.npz",
+      "label": "uphill9_step999424_phase12plus",
+      "global_step": 999424,
+      "samples": 960,
+      "phase_start": 12,
+      "phase_end": null
+    }
+  ],
+  "threshold": 0.4,
+  "matrix": "combined",
+  "groups": [
+    {
+      "indices": [
+        2,
+        10,
+        13,
+        21
+      ],
+      "names": [
+        "edl_r",
+        "tibant_r",
+        "edl_l",
+        "tibant_l"
+      ]
+    },
+    {
+      "indices": [
+        0,
+        4
+      ],
+      "names": [
+        "hamstrings_r",
+        "glutmax_r"
+      ]
+    },
+    {
+      "indices": [
+        5,
+        6
+      ],
+      "names": [
+        "iliopsoas_r",
+        "rectfem_r"
+      ]
+    },
+    {
+      "indices": [
+        11,
+        15
+      ],
+      "names": [
+        "hamstrings_l",
+        "glutmax_l"
+      ]
+    },
+    {
+      "indices": [
+        16,
+        17
+      ],
+      "names": [
+        "iliopsoas_l",
+        "rectfem_l"
+      ]
+    },
+    {
+      "indices": [
+        19,
+        20
+      ],
+      "names": [
+        "gastroc_l",
+        "soleus_l"
+      ]
+    },
+    {
+      "indices": [
+        1
+      ],
+      "names": [
+        "bifemsh_r"
+      ]
+    },
+    {
+      "indices": [
+        3
+      ],
+      "names": [
+        "fdl_r"
+      ]
+    },
+    {
+      "indices": [
+        7
+      ],
+      "names": [
+        "vasti_r"
+      ]
+    },
+    {
+      "indices": [
+        8
+      ],
+      "names": [
+        "gastroc_r"
+      ]
+    },
+    {
+      "indices": [
+        9
+      ],
+      "names": [
+        "soleus_r"
+      ]
+    },
+    {
+      "indices": [
+        12
+      ],
+      "names": [
+        "bifemsh_l"
+      ]
+    },
+    {
+      "indices": [
+        14
+      ],
+      "names": [
+        "fdl_l"
+      ]
+    },
+    {
+      "indices": [
+        18
+      ],
+      "names": [
+        "vasti_l"
+      ]
+    }
+  ]
+}

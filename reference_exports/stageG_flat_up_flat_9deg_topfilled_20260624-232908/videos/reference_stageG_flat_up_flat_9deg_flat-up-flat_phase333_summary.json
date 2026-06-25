@@ -1,0 +1,34 @@
+{
+  "support_z_threshold": 0.025,
+  "feet": {
+    "r_heel_btm": {
+      "support_frames": 54,
+      "surfaces": [],
+      "min_edge_margin": null,
+      "min_clearance": 0.019999870282653154,
+      "max_clearance": 0.27380362474743025
+    },
+    "r_toe_btm": {
+      "support_frames": 11,
+      "surfaces": [],
+      "min_edge_margin": null,
+      "min_clearance": 0.019999906315799842,
+      "max_clearance": 0.13024310900917646
+    },
+    "l_heel_btm": {
+      "support_frames": 29,
+      "surfaces": [],
+      "min_edge_margin": null,
+      "min_clearance": 0.019999872912147998,
+      "max_clearance": 0.2169053845112725
+    },
+    "l_toe_btm": {
+      "support_frames": 20,
+      "surfaces": [],
+      "min_edge_margin": null,
+      "min_clearance": 0.019999888993618153,
+      "max_clearance": 0.1335065577784078
+    }
+  },
+  "max_pelvis_ty_frame_delta": 0.01074671745300293
+}

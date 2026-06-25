@@ -1,0 +1,82 @@
+{
+  "slope_deg": 9.207,
+  "slope": 0.16209004,
+  "configs": [
+    {
+      "name": "steady_contact_aligned",
+      "shift": 0.35,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_contact_aligned_shift_0p35_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_selected_contact_aligned/camargo_ab06_slopeascent_rampascent_selected_contact_aligned_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_contact_aligned",
+      "shift": 0.7,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_contact_aligned_shift_0p70_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_selected_contact_aligned/camargo_ab06_slopeascent_rampascent_selected_contact_aligned_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_contact_aligned",
+      "shift": 1.05,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_contact_aligned_shift_1p05_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_selected_contact_aligned/camargo_ab06_slopeascent_rampascent_selected_contact_aligned_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_footlocked",
+      "shift": 0.35,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_footlocked_shift_0p35_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_footlocked/camargo_ab06_slopeascent_rampascent_footlocked_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_footlocked",
+      "shift": 0.7,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_footlocked_shift_0p70_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_footlocked/camargo_ab06_slopeascent_rampascent_footlocked_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_footlocked",
+      "shift": 1.05,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_footlocked_shift_1p05_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference_footlocked/camargo_ab06_slopeascent_rampascent_footlocked_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_raw_200hz",
+      "shift": 0.35,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_raw_200hz_shift_0p35_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference/camargo_ab06_slopeascent_rampascent_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_raw_200hz",
+      "shift": 0.7,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_raw_200hz_shift_0p70_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference/camargo_ab06_slopeascent_rampascent_myoassist_3d.npz"
+    },
+    {
+      "name": "steady_raw_200hz",
+      "shift": 1.05,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_steady_raw_200hz_shift_1p05_review.json",
+      "reference": "/home/lzn/exoskeleton_terrain/data/camargo_reference/camargo_ab06_slopeascent_rampascent_myoassist_3d.npz"
+    },
+    {
+      "name": "walk_to_rampascent",
+      "shift": 0.35,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_walk_to_rampascent_shift_0p35_review.json",
+      "reference": "data/camargo_transition_references/camargo_ab06_slopeascent_walk-rampascent_transition_myoassist_3d.npz"
+    },
+    {
+      "name": "walk_to_rampascent",
+      "shift": 0.7,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_walk_to_rampascent_shift_0p70_review.json",
+      "reference": "data/camargo_transition_references/camargo_ab06_slopeascent_walk-rampascent_transition_myoassist_3d.npz"
+    },
+    {
+      "name": "walk_to_rampascent",
+      "shift": 1.05,
+      "config": "results/stageG_uphill9_reference_review/muscle_2d_mjwarp_stageG_uphill9_walk_to_rampascent_shift_1p05_review.json",
+      "reference": "data/camargo_transition_references/camargo_ab06_slopeascent_walk-rampascent_transition_myoassist_3d.npz"
+    }
+  ],
+  "notes": {
+    "purpose": "Review 9.207 degree uphill references before training or long-reference stitching.",
+    "next_step": "After visual approval, stitch a longer course with pose-matched joins and export 3s join clips."
+  }
+}
