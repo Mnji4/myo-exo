@@ -6,7 +6,7 @@
 
 ```text
 myo_exo_train/
-├── main.py                 # 命令行入口
+├── main.py                 # 入口
 ├── checkpoint.py           # checkpoint 加载、兼容和保存
 ├── evaluation.py           # 策略评估、视频和诊断 CSV
 ├── env/
@@ -25,7 +25,7 @@ myo_exo_train/
     └── trainer.py          # 组装以上模块并执行训练主循环
 ```
 
-## 一次训练怎么走
+## 训练流程
 
 1. `main.py` 读取命令行参数，进入 `trainer.py`。
 2. 加载模型、单条完整参考轨迹和 checkpoint。
@@ -52,4 +52,3 @@ python -m myo_exo_train.main \
   --outdir results/experiment_name
 ```
 
-实验参数仍放在仓库根目录的 `configs/`，参考轨迹在 `reference_exports/`，训练结果写入 `results/`。
