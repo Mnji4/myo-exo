@@ -1,0 +1,448 @@
+{
+  "schema_version": 2,
+  "reference": "../course80_3d_balanced_v8.npz",
+  "reference_sha256": "2489be128e34d108115e810e39b598cfb4fecf565bc47d40fce9533c08a6257d",
+  "terrain_include": "terrain_course_include.xml",
+  "coordinate_contract": {
+    "model_forward_axis": "+y",
+    "metadata_legacy_axis_names": "segment x0/x1 are positions along model world +y",
+    "vertical_axis": "+z",
+    "lateral_axis": "+x"
+  },
+  "geometry": {
+    "implementation": "compile-time MuJoCo box geoms only; no hfield",
+    "half_width_m": 1.25,
+    "geom_count": 23,
+    "friction": [
+      1.0,
+      0.005,
+      0.0001
+    ],
+    "segments": [
+      {
+        "type": "flat_box",
+        "x0": -4.870523789908271,
+        "x1": 0.0,
+        "height": 0.0,
+        "semantic_label": "flat_low_start"
+      },
+      {
+        "type": "ramp_box",
+        "x0": 0.0,
+        "x1": 4.0,
+        "height0": 0.0,
+        "height1": 0.64836016,
+        "slope": 0.16209004,
+        "semantic_label": "uphill"
+      },
+      {
+        "type": "flat_box",
+        "x0": 4.0,
+        "x1": 8.2396249495605,
+        "height": 0.64836016,
+        "semantic_label": "flat_high"
+      },
+      {
+        "type": "ramp_box",
+        "x0": 8.2396249495605,
+        "x1": 12.2396249495605,
+        "height0": 0.64836016,
+        "height1": 0.0,
+        "slope": -0.16209004,
+        "semantic_label": "downhill"
+      },
+      {
+        "type": "flat_box",
+        "x0": 12.2396249495605,
+        "x1": 16.887784498973605,
+        "height": 0.0,
+        "semantic_label": "flat_after_downhill"
+      },
+      {
+        "type": "stairs_box",
+        "x0": 16.887784498973605,
+        "x1": 19.427780738973606,
+        "step_height": 0.127,
+        "step_depth": 0.31749953,
+        "direction": 1,
+        "steps": 8,
+        "base_height": 0.0,
+        "top_platform_extra_steps": 1,
+        "top_platform_height": 1.143,
+        "semantic_label": "stairup"
+      },
+      {
+        "type": "flat_box",
+        "x0": 19.427780738973606,
+        "x1": 27.373741657702382,
+        "height": 1.143,
+        "semantic_label": "flat_after_stairup"
+      },
+      {
+        "type": "stairs_box",
+        "x0": 27.373741657702382,
+        "x1": 29.69374165770238,
+        "step_height": 0.127,
+        "step_depth": 0.29,
+        "direction": -1,
+        "steps": 8,
+        "base_height": 1.143,
+        "reference_x_shift": 0.0,
+        "semantic_label": "stairdown"
+      },
+      {
+        "type": "flat_box",
+        "x0": 29.69374165770238,
+        "x1": 35.07373051434679,
+        "height": 0.0,
+        "semantic_label": "flat_final"
+      }
+    ]
+  },
+  "integration": {
+    "required_reference_arrays": [
+      "series_data.qpos_full",
+      "series_data.qvel_full"
+    ],
+    "sample_rate_hz": 30.0,
+    "frame_count": 1066,
+    "qpos_shape": [
+      1066,
+      35
+    ],
+    "qvel_shape": [
+      1066,
+      34
+    ],
+    "root_qpos_layout": [
+      "lateral_x",
+      "forward_y",
+      "vertical_z",
+      "qw",
+      "qx",
+      "qy",
+      "qz"
+    ],
+    "compile_order": "Generate/include terrain geoms before MjModel compilation; do not mutate an hfield after compile.",
+    "trainer_adapter": "The trainer must load its own local myoLeg80_HMEDI XML, include equivalent generated geoms, and use root y as course progress."
+  },
+  "model_contract": {
+    "name": "myoLeg80_HMEDI",
+    "expected_repository_path": "models/80muscle/myoLeg80_HMEDI/myolegs_HMEDI.xml",
+    "nq": 35,
+    "nv": 34,
+    "nu": 82,
+    "njnt": 29,
+    "joints": [
+      {
+        "id": 0,
+        "name": "root",
+        "type": "free",
+        "qpos_address": 0,
+        "dof_address": 0
+      },
+      {
+        "id": 1,
+        "name": "hip_flexion_r",
+        "type": "hinge",
+        "qpos_address": 7,
+        "dof_address": 6
+      },
+      {
+        "id": 2,
+        "name": "hip_adduction_r",
+        "type": "hinge",
+        "qpos_address": 8,
+        "dof_address": 7
+      },
+      {
+        "id": 3,
+        "name": "hip_rotation_r",
+        "type": "hinge",
+        "qpos_address": 9,
+        "dof_address": 8
+      },
+      {
+        "id": 4,
+        "name": "knee_angle_r_translation2",
+        "type": "slide",
+        "qpos_address": 10,
+        "dof_address": 9
+      },
+      {
+        "id": 5,
+        "name": "knee_angle_r_translation1",
+        "type": "slide",
+        "qpos_address": 11,
+        "dof_address": 10
+      },
+      {
+        "id": 6,
+        "name": "knee_angle_r",
+        "type": "hinge",
+        "qpos_address": 12,
+        "dof_address": 11
+      },
+      {
+        "id": 7,
+        "name": "knee_angle_r_rotation2",
+        "type": "hinge",
+        "qpos_address": 13,
+        "dof_address": 12
+      },
+      {
+        "id": 8,
+        "name": "knee_angle_r_rotation3",
+        "type": "hinge",
+        "qpos_address": 14,
+        "dof_address": 13
+      },
+      {
+        "id": 9,
+        "name": "ankle_angle_r",
+        "type": "hinge",
+        "qpos_address": 15,
+        "dof_address": 14
+      },
+      {
+        "id": 10,
+        "name": "subtalar_angle_r",
+        "type": "hinge",
+        "qpos_address": 16,
+        "dof_address": 15
+      },
+      {
+        "id": 11,
+        "name": "mtp_angle_r",
+        "type": "hinge",
+        "qpos_address": 17,
+        "dof_address": 16
+      },
+      {
+        "id": 12,
+        "name": "knee_angle_r_beta_translation2",
+        "type": "slide",
+        "qpos_address": 18,
+        "dof_address": 17
+      },
+      {
+        "id": 13,
+        "name": "knee_angle_r_beta_translation1",
+        "type": "slide",
+        "qpos_address": 19,
+        "dof_address": 18
+      },
+      {
+        "id": 14,
+        "name": "knee_angle_r_beta_rotation1",
+        "type": "hinge",
+        "qpos_address": 20,
+        "dof_address": 19
+      },
+      {
+        "id": 15,
+        "name": "hip_flexion_l",
+        "type": "hinge",
+        "qpos_address": 21,
+        "dof_address": 20
+      },
+      {
+        "id": 16,
+        "name": "hip_adduction_l",
+        "type": "hinge",
+        "qpos_address": 22,
+        "dof_address": 21
+      },
+      {
+        "id": 17,
+        "name": "hip_rotation_l",
+        "type": "hinge",
+        "qpos_address": 23,
+        "dof_address": 22
+      },
+      {
+        "id": 18,
+        "name": "knee_angle_l_translation2",
+        "type": "slide",
+        "qpos_address": 24,
+        "dof_address": 23
+      },
+      {
+        "id": 19,
+        "name": "knee_angle_l_translation1",
+        "type": "slide",
+        "qpos_address": 25,
+        "dof_address": 24
+      },
+      {
+        "id": 20,
+        "name": "knee_angle_l",
+        "type": "hinge",
+        "qpos_address": 26,
+        "dof_address": 25
+      },
+      {
+        "id": 21,
+        "name": "knee_angle_l_rotation2",
+        "type": "hinge",
+        "qpos_address": 27,
+        "dof_address": 26
+      },
+      {
+        "id": 22,
+        "name": "knee_angle_l_rotation3",
+        "type": "hinge",
+        "qpos_address": 28,
+        "dof_address": 27
+      },
+      {
+        "id": 23,
+        "name": "ankle_angle_l",
+        "type": "hinge",
+        "qpos_address": 29,
+        "dof_address": 28
+      },
+      {
+        "id": 24,
+        "name": "subtalar_angle_l",
+        "type": "hinge",
+        "qpos_address": 30,
+        "dof_address": 29
+      },
+      {
+        "id": 25,
+        "name": "mtp_angle_l",
+        "type": "hinge",
+        "qpos_address": 31,
+        "dof_address": 30
+      },
+      {
+        "id": 26,
+        "name": "knee_angle_l_beta_translation2",
+        "type": "slide",
+        "qpos_address": 32,
+        "dof_address": 31
+      },
+      {
+        "id": 27,
+        "name": "knee_angle_l_beta_translation1",
+        "type": "slide",
+        "qpos_address": 33,
+        "dof_address": 32
+      },
+      {
+        "id": 28,
+        "name": "knee_angle_l_beta_rotation1",
+        "type": "hinge",
+        "qpos_address": 34,
+        "dof_address": 33
+      }
+    ],
+    "actuator_names": [
+      "addbrev_r",
+      "addlong_r",
+      "addmagDist_r",
+      "addmagIsch_r",
+      "addmagMid_r",
+      "addmagProx_r",
+      "bflh_r",
+      "bfsh_r",
+      "edl_r",
+      "ehl_r",
+      "fdl_r",
+      "fhl_r",
+      "gaslat_r",
+      "gasmed_r",
+      "glmax1_r",
+      "glmax2_r",
+      "glmax3_r",
+      "glmed1_r",
+      "glmed2_r",
+      "glmed3_r",
+      "glmin1_r",
+      "glmin2_r",
+      "glmin3_r",
+      "grac_r",
+      "iliacus_r",
+      "perbrev_r",
+      "perlong_r",
+      "piri_r",
+      "psoas_r",
+      "recfem_r",
+      "sart_r",
+      "semimem_r",
+      "semiten_r",
+      "soleus_r",
+      "tfl_r",
+      "tibant_r",
+      "tibpost_r",
+      "vasint_r",
+      "vaslat_r",
+      "vasmed_r",
+      "addbrev_l",
+      "addlong_l",
+      "addmagDist_l",
+      "addmagIsch_l",
+      "addmagMid_l",
+      "addmagProx_l",
+      "bflh_l",
+      "bfsh_l",
+      "edl_l",
+      "ehl_l",
+      "fdl_l",
+      "fhl_l",
+      "gaslat_l",
+      "gasmed_l",
+      "glmax1_l",
+      "glmax2_l",
+      "glmax3_l",
+      "glmed1_l",
+      "glmed2_l",
+      "glmed3_l",
+      "glmin1_l",
+      "glmin2_l",
+      "glmin3_l",
+      "grac_l",
+      "iliacus_l",
+      "perbrev_l",
+      "perlong_l",
+      "piri_l",
+      "psoas_l",
+      "recfem_l",
+      "sart_l",
+      "semimem_l",
+      "semiten_l",
+      "soleus_l",
+      "tfl_l",
+      "tibant_l",
+      "tibpost_l",
+      "vasint_l",
+      "vaslat_l",
+      "vasmed_l",
+      "Exo_R",
+      "Exo_L"
+    ],
+    "dependency_files": {
+      "model_xml": {
+        "repository_path": "models/80muscle/myoLeg80_HMEDI/myolegs_HMEDI.xml",
+        "sha256": "c9374b19d2a511f33c4dcd47902a53e1e3f8c2c74880dac58a0858af13143d3a"
+      },
+      "leg_chain": {
+        "repository_path": "models/80muscle/myoLeg80_HMEDI/assets/myolegs_chain_HMEDI.xml",
+        "sha256": "572163b9d80c07a053cf8ab1cd119cdcdde49746ffb10ecbc93663bfd1ad81df"
+      },
+      "leg_assets": {
+        "repository_path": "models/80muscle/myoLeg80_HMEDI/assets/myolegs_assets_HMEDI.xml",
+        "sha256": "b6b30cd3f7f41b4d20d2389a51c2c3f78e8f8ec8d4f4c67d389c4f4c87cac9d3"
+      },
+      "torso_chain": {
+        "repository_path": "myosuite/simhive/myo_sim/torso/assets/myotorso_rigid_chain.xml",
+        "sha256": "3c225848895ddb5bd7b97c50b0b6127c9dadb204274a6920f191314a478ee893"
+      },
+      "torso_assets": {
+        "repository_path": "myosuite/simhive/myo_sim/torso/assets/myotorso_rigid_assets.xml",
+        "sha256": "a0a66c67d91aca0784ac422029f3c9f855c14cf497fa195506edf4a0d0114ea4"
+      }
+    }
+  }
+}
