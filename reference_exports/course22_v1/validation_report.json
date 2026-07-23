@@ -1,0 +1,443 @@
+{
+  "status": "pass_contact_review_joint_limits",
+  "frames": 1066,
+  "qpos_shape": [
+    1066,
+    53
+  ],
+  "qvel_shape": [
+    1066,
+    53
+  ],
+  "max_pelvis_height_frame_delta_m": 0.021406454110171724,
+  "max_abs_qvel": 10.313593000173569,
+  "ranges": {
+    "flat_low_start": {
+      "all_sites_min_clearance_m": -0.0022781784714656986,
+      "all_sites_p05_clearance_m": 0.00453970623839077,
+      "all_sites_median_frame_min_clearance_m": 0.005862827980081561,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.0003799119462983419,
+      "inferred_support_p05_clearance_m": 0.003833696530151116,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "level_to_up": {
+      "all_sites_min_clearance_m": -0.018599730574196227,
+      "all_sites_p05_clearance_m": 0.002827156009091461,
+      "all_sites_median_frame_min_clearance_m": 0.0059633831610848564,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.0011978716943338297,
+      "inferred_support_p05_clearance_m": 0.0015278919184184114,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "uphill": {
+      "all_sites_min_clearance_m": -0.015404961969050196,
+      "all_sites_p05_clearance_m": 0.0028228944498697173,
+      "all_sites_median_frame_min_clearance_m": 0.005926105684270211,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.0001470234563175632,
+      "inferred_support_p05_clearance_m": 0.0010271156404105144,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "up_to_level": {
+      "all_sites_min_clearance_m": -0.006579690943288807,
+      "all_sites_p05_clearance_m": 0.0037159756328544458,
+      "all_sites_median_frame_min_clearance_m": 0.005715142110165994,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.002959172904396956,
+      "inferred_support_p05_clearance_m": 0.002759244098111347,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "flat_high": {
+      "all_sites_min_clearance_m": 0.001414074465137194,
+      "all_sites_p05_clearance_m": 0.005078899380324825,
+      "all_sites_median_frame_min_clearance_m": 0.006043221859209025,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.004336479623123002,
+      "inferred_support_p05_clearance_m": 0.004596330398870319,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "level_to_down": {
+      "all_sites_min_clearance_m": 0.0017955663771336283,
+      "all_sites_p05_clearance_m": 0.004381971218345571,
+      "all_sites_median_frame_min_clearance_m": 0.00626311206991137,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.0017955663771336283,
+      "inferred_support_p05_clearance_m": 0.0026980898306389724,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "downhill": {
+      "all_sites_min_clearance_m": -0.0006862174541765777,
+      "all_sites_p05_clearance_m": 0.003439569506596327,
+      "all_sites_median_frame_min_clearance_m": 0.005900972820232553,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.002381968717558594,
+      "inferred_support_p05_clearance_m": 0.0026361574407288923,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "down_to_level": {
+      "all_sites_min_clearance_m": -0.00870461261283147,
+      "all_sites_p05_clearance_m": -0.0022534256710286566,
+      "all_sites_median_frame_min_clearance_m": 0.004543667686504068,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.004095469347181286,
+      "inferred_support_p05_clearance_m": -0.0023286136357805174,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "flat_after_downhill": {
+      "all_sites_min_clearance_m": -0.010266358046197365,
+      "all_sites_p05_clearance_m": 0.0027704337616065514,
+      "all_sites_median_frame_min_clearance_m": 0.00520557702490248,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.005070314208583357,
+      "inferred_support_p05_clearance_m": 0.0006405513673352161,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "walk_to_stairup": {
+      "all_sites_min_clearance_m": -0.0016268518778387864,
+      "all_sites_p05_clearance_m": 0.004046139595097543,
+      "all_sites_median_frame_min_clearance_m": 0.006282980895953941,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.003388565228013174,
+      "inferred_support_p05_clearance_m": 0.003872002994035875,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "stairup": {
+      "all_sites_min_clearance_m": -0.024655550518998703,
+      "all_sites_p05_clearance_m": 0.0034333912613676576,
+      "all_sites_median_frame_min_clearance_m": 0.006508177987779862,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.0013999802143465079,
+      "inferred_support_p05_clearance_m": 0.00231217662785424,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "stairup_to_walk": {
+      "all_sites_min_clearance_m": -0.014507271276070544,
+      "all_sites_p05_clearance_m": -0.007216631842144793,
+      "all_sites_median_frame_min_clearance_m": 0.003363100624587889,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.00022552593706648416,
+      "inferred_support_p05_clearance_m": 0.0017370383749290563,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "flat_after_stairup": {
+      "all_sites_min_clearance_m": -0.002471397592537228,
+      "all_sites_p05_clearance_m": 0.004483524223727164,
+      "all_sites_median_frame_min_clearance_m": 0.00573116445944899,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.0010333086775544675,
+      "inferred_support_p05_clearance_m": 0.00370265535650125,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "walk_to_stairdown": {
+      "all_sites_min_clearance_m": -0.07561095070568213,
+      "all_sites_p05_clearance_m": -0.02106684699959581,
+      "all_sites_median_frame_min_clearance_m": -0.002477832995637197,
+      "all_sites_frames_any_below_minus_3cm": 4,
+      "inferred_support_min_clearance_m": -0.00569017805186145,
+      "inferred_support_p05_clearance_m": -0.004230554606925185,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "stairdown": {
+      "all_sites_min_clearance_m": -0.008998185285755356,
+      "all_sites_p05_clearance_m": -0.0030469200729871192,
+      "all_sites_median_frame_min_clearance_m": 0.004697050034785821,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": -0.003413050602447454,
+      "inferred_support_p05_clearance_m": -0.0012901598373484258,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "stairdown_to_walk": {
+      "all_sites_min_clearance_m": 0.0013069459151294205,
+      "all_sites_p05_clearance_m": 0.006162296909207947,
+      "all_sites_median_frame_min_clearance_m": 0.008170648890645145,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.0013069459151294205,
+      "inferred_support_p05_clearance_m": 0.002106033262349462,
+      "inferred_support_frames_below_minus_3cm": 0
+    },
+    "flat_final": {
+      "all_sites_min_clearance_m": -0.018780749974591143,
+      "all_sites_p05_clearance_m": 0.004352293440319423,
+      "all_sites_median_frame_min_clearance_m": 0.005479353482267028,
+      "all_sites_frames_any_below_minus_3cm": 0,
+      "inferred_support_min_clearance_m": 0.0009434583561705847,
+      "inferred_support_p05_clearance_m": 0.0038426627113221546,
+      "inferred_support_frames_below_minus_3cm": 0
+    }
+  },
+  "joint_limit_violations": [
+    {
+      "joint": "hip_flexion_r",
+      "min": -0.5233750939369202,
+      "max": 0.9515473246574402,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "knee_r_translation1",
+      "min": -0.0032122133002219075,
+      "max": 0.00438981653073533,
+      "range": [
+        -0.005574,
+        0.00411
+      ]
+    },
+    {
+      "joint": "knee_r_translation2",
+      "min": -0.4135570458845254,
+      "max": -0.39525061595344635,
+      "range": [
+        -0.4226,
+        -0.3953
+      ]
+    },
+    {
+      "joint": "ankle_angle_r",
+      "min": -0.24843549728393555,
+      "max": 0.8939411640167236,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    },
+    {
+      "joint": "hamstrings_r_semimem_r-P2_x",
+      "min": -0.03394373076014856,
+      "max": -0.0267196457182629,
+      "range": [
+        -0.0348,
+        -0.027
+      ]
+    },
+    {
+      "joint": "hamstrings_r_semimem_r-P2_y",
+      "min": -0.048161308223177726,
+      "max": -0.036565830474016535,
+      "range": [
+        -0.04771,
+        -0.03519
+      ]
+    },
+    {
+      "joint": "rect_fem_r_rect_fem_r-P3_y",
+      "min": 0.02105014732660712,
+      "max": 0.02537498100921982,
+      "range": [
+        -0.06738,
+        0.02531
+      ]
+    },
+    {
+      "joint": "gastroc_r_med_gas_r-P2_x",
+      "min": -0.031198504588395376,
+      "max": -0.026513089177459724,
+      "range": [
+        -0.03,
+        -0.019
+      ]
+    },
+    {
+      "joint": "gastroc_r_med_gas_r-P2_y",
+      "min": -0.4032349338409401,
+      "max": -0.39927459371402585,
+      "range": [
+        -0.4022,
+        -0.3929
+      ]
+    },
+    {
+      "joint": "gastroc_r_med_gas_r-P2_z",
+      "min": -0.026051445848978484,
+      "max": -0.025072615619051206,
+      "range": [
+        -0.0258,
+        -0.0235
+      ]
+    },
+    {
+      "joint": "hip_flexion_l",
+      "min": -0.5027173757553101,
+      "max": 0.8955443501472473,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "knee_l_translation1",
+      "min": -0.003209499572984674,
+      "max": 0.004390198256393397,
+      "range": [
+        -0.005574,
+        0.00411
+      ]
+    },
+    {
+      "joint": "knee_l_translation2",
+      "min": -0.4139043050329808,
+      "max": -0.3952523222463224,
+      "range": [
+        -0.4226,
+        -0.3953
+      ]
+    },
+    {
+      "joint": "ankle_angle_l",
+      "min": -0.38030320405960083,
+      "max": 0.7521907687187195,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    },
+    {
+      "joint": "hamstrings_l_semimem_l-P2_x",
+      "min": -0.03394154395040521,
+      "max": -0.026677438245668216,
+      "range": [
+        -0.0348,
+        -0.027
+      ]
+    },
+    {
+      "joint": "hamstrings_l_semimem_l-P2_y",
+      "min": -0.0482290307728009,
+      "max": -0.03656934073718006,
+      "range": [
+        -0.04771,
+        -0.03519
+      ]
+    },
+    {
+      "joint": "rect_fem_l_rect_fem_l-P3_y",
+      "min": 0.021054440446857302,
+      "max": 0.025374965546648906,
+      "range": [
+        -0.06738,
+        0.02531
+      ]
+    },
+    {
+      "joint": "gastroc_l_med_gas_l-P2_x",
+      "min": -0.03119844716553973,
+      "max": -0.026515802819436347,
+      "range": [
+        -0.03,
+        -0.019
+      ]
+    },
+    {
+      "joint": "gastroc_l_med_gas_l-P2_y",
+      "min": -0.40323488862751267,
+      "max": -0.39927688786270354,
+      "range": [
+        -0.4022,
+        -0.3929
+      ]
+    },
+    {
+      "joint": "gastroc_l_med_gas_l-P2_z",
+      "min": 0.02507318282780812,
+      "max": 0.026051435887426314,
+      "range": [
+        -0.0258,
+        -0.0235
+      ]
+    },
+    {
+      "joint": "iliopsoas_r_psoas_r-P3_x",
+      "min": -0.029164073481121044,
+      "max": -0.026027427898724007,
+      "range": [
+        -0.0288,
+        -0.0238
+      ]
+    },
+    {
+      "joint": "iliopsoas_r_psoas_r-P3_y",
+      "min": -0.08221594712303246,
+      "max": -0.06747642679547963,
+      "range": [
+        -0.0805,
+        -0.057
+      ]
+    },
+    {
+      "joint": "iliopsoas_r_psoas_r-P3_z",
+      "min": 0.07844457178404576,
+      "max": 0.08201995657173997,
+      "range": [
+        0.0759,
+        0.0816
+      ]
+    },
+    {
+      "joint": "iliopsoas_l_psoas_l-P3_x",
+      "min": -0.029151681667293237,
+      "max": -0.02620829619645081,
+      "range": [
+        -0.0288,
+        -0.0238
+      ]
+    },
+    {
+      "joint": "iliopsoas_l_psoas_l-P3_y",
+      "min": -0.08215769898949918,
+      "max": -0.06832626264300555,
+      "range": [
+        -0.0805,
+        -0.057
+      ]
+    },
+    {
+      "joint": "iliopsoas_l_psoas_l-P3_z",
+      "min": -0.08200583194576772,
+      "max": -0.0786507355029731,
+      "range": [
+        -0.0816,
+        -0.0759
+      ]
+    }
+  ],
+  "tracked_joint_limit_violations": [
+    {
+      "joint": "hip_flexion_r",
+      "min": -0.5233750939369202,
+      "max": 0.9515473246574402,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "ankle_angle_r",
+      "min": -0.24843549728393555,
+      "max": 0.8939411640167236,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    },
+    {
+      "joint": "hip_flexion_l",
+      "min": -0.5027173757553101,
+      "max": 0.8955443501472473,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "ankle_angle_l",
+      "min": -0.38030320405960083,
+      "max": 0.7521907687187195,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    }
+  ]
+}

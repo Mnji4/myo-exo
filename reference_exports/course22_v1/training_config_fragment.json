@@ -1,0 +1,109 @@
+{
+  "terrain_forward_axis": "x",
+  "model": {
+    "source_xml": "models/22muscle_2D/myoLeg22_2D_BASELINE.xml",
+    "disable_multiccd": true
+  },
+  "control": {
+    "control_hz": 30
+  },
+  "reference_pool": {
+    "paths": [
+      "reference_exports/course22_v1/course22_v1.npz"
+    ]
+  },
+  "terrain_course": {
+    "enabled": true,
+    "terrain_forward_axis": "x",
+    "terrain_box_hide_hfield": true,
+    "disable_ground_plane_contact": true,
+    "terrain_box_half_width": 1.25,
+    "stair_box_half_width": 1.25,
+    "add_terrain_box_contact_pairs": true,
+    "add_stair_box_contact_pairs": true,
+    "terrain_box_thickness": 0.08,
+    "segments": [
+      {
+        "type": "flat_box",
+        "x0": -4.870523789908271,
+        "x1": 0.0,
+        "height": 0.0,
+        "semantic_label": "flat_low_start"
+      },
+      {
+        "type": "ramp_box",
+        "x0": 0.0,
+        "x1": 4.0,
+        "height0": 0.0,
+        "height1": 0.64836016,
+        "slope": 0.16209004,
+        "semantic_label": "uphill"
+      },
+      {
+        "type": "flat_box",
+        "x0": 4.0,
+        "x1": 8.2396249495605,
+        "height": 0.64836016,
+        "semantic_label": "flat_high"
+      },
+      {
+        "type": "ramp_box",
+        "x0": 8.2396249495605,
+        "x1": 12.2396249495605,
+        "height0": 0.64836016,
+        "height1": 0.0,
+        "slope": -0.16209004,
+        "semantic_label": "downhill"
+      },
+      {
+        "type": "flat_box",
+        "x0": 12.2396249495605,
+        "x1": 16.887784498973605,
+        "height": 0.0,
+        "semantic_label": "flat_after_downhill"
+      },
+      {
+        "type": "stairs_box",
+        "x0": 16.887784498973605,
+        "x1": 19.427780738973606,
+        "step_height": 0.127,
+        "step_depth": 0.31749953,
+        "direction": 1,
+        "steps": 8,
+        "base_height": 0.0,
+        "top_platform_extra_steps": 1,
+        "top_platform_height": 1.143,
+        "semantic_label": "stairup",
+        "platform_depth": 0.0
+      },
+      {
+        "type": "flat_box",
+        "x0": 19.427780738973606,
+        "x1": 27.373741657702382,
+        "height": 1.143,
+        "semantic_label": "flat_after_stairup"
+      },
+      {
+        "type": "stairs_box",
+        "x0": 27.373741657702382,
+        "x1": 29.69374165770238,
+        "step_height": 0.127,
+        "step_depth": 0.29,
+        "direction": -1,
+        "steps": 8,
+        "base_height": 1.016,
+        "reference_x_shift": 0.0,
+        "semantic_label": "stairdown",
+        "platform_depth": 0.0,
+        "source_base_height": 1.143
+      },
+      {
+        "type": "flat_box",
+        "x0": 29.69374165770238,
+        "x1": 35.07373051434679,
+        "height": 0.0,
+        "semantic_label": "flat_final"
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "video": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/videos/course22_v1_side.mp4",
+  "reference": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/course22_v1.npz",
+  "terrain": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/terrain_course22_include.xml",
+  "model": "/home/lzn/myoassist/models/22muscle_2D/myoLeg22_2D_BASELINE.xml",
+  "frames": 1066,
+  "duration_sec": 35.53333333333333,
+  "resolution": [
+    480,
+    272
+  ],
+  "fps": 30,
+  "camera": {
+    "azimuth": 90.0,
+    "elevation": -8.0,
+    "distance": 2.8
+  },
+  "encoder": {
+    "ffmpeg": "/home/lzn/miniconda3/envs/myoassist-mjwarp/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2",
+    "encoder": "libx264",
+    "cmd": [
+      "/home/lzn/miniconda3/envs/myoassist-mjwarp/lib/python3.11/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2",
+      "-loglevel",
+      "error",
+      "-y",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "-s",
+      "480x272",
+      "-r",
+      "30",
+      "-i",
+      "-",
+      "-an",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "23",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      "/home/lzn/myo-exo_upload/reference_exports/course22_v1/videos/course22_v1_side.mp4"
+    ]
+  },
+  "reference_variant": "course22_v1"
+}

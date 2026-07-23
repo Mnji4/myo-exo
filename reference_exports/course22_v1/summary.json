@@ -1,0 +1,50 @@
+{
+  "reference": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/course22_v1.npz",
+  "terrain_include": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/terrain_course22_include.xml",
+  "terrain_contract": "/home/lzn/myo-exo_upload/reference_exports/course22_v1/terrain_contract.json",
+  "frames": 1066,
+  "duration_sec": 35.53333333333333,
+  "selected_forward_shift_m": 0.050000000000000155,
+  "pelvis_height_source_delta_mean_m": -0.09206581517522201,
+  "pelvis_height_source_delta_min_m": -0.34875029512459044,
+  "pelvis_height_source_delta_max_m": 0.0006358451848729185,
+  "validation_status": "pass_contact_review_joint_limits",
+  "tracked_joint_limit_violations": [
+    {
+      "joint": "hip_flexion_r",
+      "min": -0.5233750939369202,
+      "max": 0.9515473246574402,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "ankle_angle_r",
+      "min": -0.24843549728393555,
+      "max": 0.8939411640167236,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    },
+    {
+      "joint": "hip_flexion_l",
+      "min": -0.5027173757553101,
+      "max": 0.8955443501472473,
+      "range": [
+        -0.349,
+        2.356
+      ]
+    },
+    {
+      "joint": "ankle_angle_l",
+      "min": -0.38030320405960083,
+      "max": 0.7521907687187195,
+      "range": [
+        -1.134,
+        0.349
+      ]
+    }
+  ]
+}
