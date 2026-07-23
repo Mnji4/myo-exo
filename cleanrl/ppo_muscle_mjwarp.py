@@ -353,6 +353,15 @@ def source_xml_with_stair_box_contacts(config: dict[str, Any]) -> tuple[Path, bo
             return values
         return " ".join(f"{float(value):g}" for value in values)
 
+    def pair_friction_attr(values: Any) -> str:
+        parsed = [float(value) for value in (values.split() if isinstance(values, str) else list(values))]
+        if len(parsed) == 3:
+            parsed = [parsed[0], parsed[0], parsed[1], parsed[2], parsed[2]]
+        return numeric_attr(parsed[:5])
+
+    stair_box_match_terrain_contact = bool(course_cfg.get("stair_box_match_terrain_contact", True))
+    disable_ground_plane_contact = bool(course_cfg.get("disable_ground_plane_contact", False))
+
     def add_pair_from_template(geom1: str, geom2: str, template: ET.Element) -> None:
         key = (geom1, geom2)
         if key in existing:
@@ -360,7 +369,7 @@ def source_xml_with_stair_box_contacts(config: dict[str, Any]) -> tuple[Path, bo
         attrs = dict(template.attrib)
         attrs["geom1"] = geom1
         attrs["geom2"] = geom2
-        if geom1.startswith("terrain_stair_box_"):
+        if geom1.startswith("terrain_stair_box_") and not stair_box_match_terrain_contact:
             if "stair_box_contact_margin" in course_cfg:
                 attrs["margin"] = f"{float(course_cfg['stair_box_contact_margin']):g}"
             if "stair_box_contact_solref" in course_cfg:
@@ -368,7 +377,7 @@ def source_xml_with_stair_box_contacts(config: dict[str, Any]) -> tuple[Path, bo
             if "stair_box_contact_solimp" in course_cfg:
                 attrs["solimp"] = numeric_attr(course_cfg["stair_box_contact_solimp"])
             if "stair_box_contact_friction" in course_cfg:
-                attrs["friction"] = numeric_attr(course_cfg["stair_box_contact_friction"])
+                attrs["friction"] = pair_friction_attr(course_cfg["stair_box_contact_friction"])
         ET.SubElement(contact, "pair", attrs)
         existing.add(key)
 
@@ -396,7 +405,7 @@ def source_xml_with_stair_box_contacts(config: dict[str, Any]) -> tuple[Path, bo
         side = "_l_" if "_l_" in geom2 else "_r_"
         add_pair_from_template(terrain_geom, geom2, template_by_side.get(side, terrain_pairs[0]))
         ground_template = ground_template_by_side.get(side)
-        if ground_template is not None:
+        if ground_template is not None and not disable_ground_plane_contact:
             add_pair_from_template(ground_geom, geom2, ground_template)
 
     terrain_pairs = [
@@ -723,6 +732,9 @@ def configure_hfield_course(model: mujoco.MjModel, config: dict[str, Any]) -> No
     ground_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, str(course_cfg.get("ground_geom", "ground-plane")))
     if ground_id >= 0:
         model.geom_rgba[ground_id, 3] = float(course_cfg.get("ground_plane_alpha", 0.0))
+        if bool(course_cfg.get("disable_ground_plane_contact", False)):
+            model.geom_contype[ground_id] = 0
+            model.geom_conaffinity[ground_id] = 0
         if bool(course_cfg.get("lower_ground_plane", False)):
             model.geom_pos[ground_id, 2] = float(course_cfg.get("ground_plane_z", -10.0))
 
