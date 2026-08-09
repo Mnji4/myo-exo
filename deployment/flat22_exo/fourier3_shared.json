@@ -1,0 +1,34 @@
+{
+  "model_type": "shared_half_cycle_fourier_torque",
+  "control_hz": 100.0,
+  "period_frames": 106.5,
+  "period_seconds": 1.065,
+  "harmonic_order": 3,
+  "coefficient_order": [
+    "bias",
+    "sin_1",
+    "cos_1",
+    "sin_2",
+    "cos_2",
+    "sin_3",
+    "cos_3"
+  ],
+  "coefficients_nm": [
+    3.6892718201192087,
+    -3.0703377164858745,
+    -0.6819822039967718,
+    0.05294510523360074,
+    -3.7018788061818992,
+    -0.993583093162228,
+    0.23888164641790383
+  ],
+  "right_phase_offset_rad": 0.0,
+  "left_phase_offset_rad": 3.141592653589793,
+  "torque_limit_nm": 10.0,
+  "max_delta_nm_per_step": 0.5,
+  "fit_metrics": {
+    "all_rmse_nm": 0.6391099757918476,
+    "heldout_tail_rmse_nm": 0.7266695987108245,
+    "heldout_tail_correlation": 0.9778501717437476
+  }
+}
