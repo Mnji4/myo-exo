@@ -179,6 +179,7 @@ def reference_phase_from_x(
     config: dict[str, Any],
     *,
     phase_lead_steps: int = 0,
+    x_align_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     base_phase = reference_index(phase_idx + int(phase_lead_steps), reference, config)
     cfg = config.get("x_aligned_reference", {})
@@ -188,6 +189,8 @@ def reference_phase_from_x(
     phase_start = int(cfg.get("phase_start", 0))
     phase_end = int(cfg.get("phase_end", ref_len))
     active = (base_phase >= phase_start) & (base_phase < phase_end)
+    if x_align_mask is not None:
+        active = active & x_align_mask.to(device=base_phase.device, dtype=torch.bool)
     if not bool(active.any().item()):
         return base_phase
     search_start = max(0, int(cfg.get("search_start", phase_start)))
@@ -197,12 +200,12 @@ def reference_phase_from_x(
     candidates = torch.arange(search_start, search_end + 1, dtype=torch.long, device=qpos.device)
     ref_x = reference["reset_q_ref"][candidates, RESET_JOINTS.index("pelvis_tx")]
     pelvis_x = qpos[:, int(reference["pelvis_tx_qpos"])].unsqueeze(1) + float(cfg.get("x_offset", 0.0))
-    nearest = candidates[torch.argmin(torch.abs(ref_x.unsqueeze(0) - pelvis_x), dim=1)]
-    max_delta = int(cfg.get("max_phase_delta", 0) or 0)
-    if max_delta > 0:
-        lo = torch.clamp(base_phase - max_delta, min=search_start)
-        hi = torch.clamp(base_phase + max_delta, max=search_end)
-        nearest = torch.clamp(nearest, min=lo, max=hi)
+    distance = torch.abs(ref_x.unsqueeze(0) - pelvis_x)
+    max_phase_delta = int(cfg.get("max_phase_delta", 0) or 0)
+    if max_phase_delta > 0:
+        phase_delta = torch.abs(candidates.unsqueeze(0) - base_phase.unsqueeze(1))
+        distance = distance.masked_fill(phase_delta > max_phase_delta, torch.inf)
+    nearest = candidates[torch.argmin(distance, dim=1)]
     return torch.where(active, nearest, base_phase)
 
 def reset_reference_phase_from_x(
@@ -232,11 +235,6 @@ def reset_reference_phase_from_x(
     ref_x = reference["reset_q_ref"][candidates, RESET_JOINTS.index("pelvis_tx")]
     pelvis_x = qpos[:, int(reference["pelvis_tx_qpos"])].unsqueeze(1) + float(cfg.get("x_offset", 0.0))
     nearest = candidates[torch.argmin(torch.abs(ref_x.unsqueeze(0) - pelvis_x), dim=1)]
-    max_delta = int(cfg.get("max_phase_delta", 0) or 0)
-    if max_delta > 0:
-        lo = torch.clamp(base_phase - max_delta, min=search_start)
-        hi = torch.clamp(base_phase + max_delta, max=search_end)
-        nearest = torch.clamp(nearest, min=lo, max=hi)
     return torch.where(active, nearest, phase_idx)
 
 def course_height_tensor(x: torch.Tensor, config: dict[str, Any]) -> torch.Tensor:
@@ -282,13 +280,16 @@ def stair_step_index_tensor(x: torch.Tensor, config: dict[str, Any]) -> torch.Te
     segments = course_cfg.get("segments", [])
     if not isinstance(segments, list) or not segments:
         return torch.zeros_like(x)
+    target_label = str(
+        config.get("reward_stair_progress", {}).get("segment_label", "") or ""
+    )
     step_index = torch.zeros_like(x)
     for segment in segments:
         if str(segment.get("type", "flat")) != "stairs_box":
             continue
-        direction = 1.0 if float(segment.get("direction", 1.0)) >= 0.0 else -1.0
-        if direction < 0.0:
+        if target_label and str(segment.get("semantic_label", "")) != target_label:
             continue
+        direction = 1.0 if float(segment.get("direction", 1.0)) >= 0.0 else -1.0
         x0 = float(segment.get("x0", 0.0))
         step_depth = max(float(segment.get("step_depth", 0.32)), 1e-6)
         steps = max(1, int(segment.get("steps", 1)))
@@ -296,14 +297,15 @@ def stair_step_index_tensor(x: torch.Tensor, config: dict[str, Any]) -> torch.Te
         raw_index = torch.floor(torch.clamp(progressed, min=0.0) / step_depth) + 1.0
         raw_index = torch.clamp(raw_index, min=0.0, max=float(steps))
         step_index = torch.where(x >= x0, torch.maximum(step_index, raw_index), step_index)
-        x_top = x0 + float(steps) * step_depth
-        platform_depth = max(float(segment.get("platform_depth", 0.0)), 0.0)
-        top_platform = (x >= x_top) & (x <= x_top + platform_depth)
-        top_height = float(segment.get("top_platform_height", float(steps) * float(segment.get("step_height", 0.127))))
-        base_height = float(segment.get("base_height", 0.0))
-        step_height = max(float(segment.get("step_height", 0.127)), 1e-6)
-        top_index = max(float(steps), (top_height - base_height) / step_height)
-        step_index = torch.where(top_platform, torch.full_like(step_index, top_index), step_index)
+        if direction > 0.0:
+            x_top = x0 + float(steps) * step_depth
+            platform_depth = max(float(segment.get("platform_depth", 0.0)), 0.0)
+            top_platform = (x >= x_top) & (x <= x_top + platform_depth)
+            top_height = float(segment.get("top_platform_height", float(steps) * float(segment.get("step_height", 0.127))))
+            base_height = float(segment.get("base_height", 0.0))
+            step_height = max(float(segment.get("step_height", 0.127)), 1e-6)
+            top_index = max(float(steps), (top_height - base_height) / step_height)
+            step_index = torch.where(top_platform, torch.full_like(step_index, top_index), step_index)
     return step_index
 
 def stair_tread_progress_tensor(x: torch.Tensor, config: dict[str, Any]) -> torch.Tensor:
@@ -311,12 +313,14 @@ def stair_tread_progress_tensor(x: torch.Tensor, config: dict[str, Any]) -> torc
     segments = course_cfg.get("segments", [])
     if not isinstance(segments, list) or not segments:
         return torch.zeros_like(x)
+    target_label = str(
+        config.get("reward_stair_progress", {}).get("segment_label", "") or ""
+    )
     progress = torch.zeros_like(x)
     for segment in segments:
         if str(segment.get("type", "flat")) != "stairs_box":
             continue
-        direction = 1.0 if float(segment.get("direction", 1.0)) >= 0.0 else -1.0
-        if direction < 0.0:
+        if target_label and str(segment.get("semantic_label", "")) != target_label:
             continue
         x0 = float(segment.get("x0", 0.0))
         step_depth = max(float(segment.get("step_depth", 0.32)), 1e-6)
@@ -351,6 +355,8 @@ def terrain_height_preview_tensor(qpos: torch.Tensor, phase_idx: torch.Tensor, r
     if count <= 0:
         return torch.empty((qpos.shape[0], 0), dtype=torch.float32, device=qpos.device)
     cfg = config.get("terrain_context", {})
+    if bool(cfg.get("zero_height_preview", False)):
+        return torch.zeros((qpos.shape[0], count), dtype=torch.float32, device=qpos.device)
     start_m = float(cfg.get("preview_start_m", 0.1))
     end_m = float(cfg.get("preview_end_m", 2.4))
     scale = max(float(cfg.get("height_scale", 0.2)), 1e-6)
@@ -615,6 +621,7 @@ def build_policy_obs_tensor(
     config: dict[str, Any],
     non_muscle_ctrl: torch.Tensor | None = None,
     non_muscle_torque: torch.Tensor | None = None,
+    x_align_mask: torch.Tensor | None = None,
 ) -> torch.Tensor:
     curriculum = current_reference_curriculum(config)
     target_phase = reference_phase_from_x(
@@ -623,12 +630,16 @@ def build_policy_obs_tensor(
         reference,
         config,
         phase_lead_steps=int(curriculum["phase_lead_steps"]),
+        x_align_mask=x_align_mask,
     )
     obs_cfg = config.get("observation", {})
     localize_obs = bool(obs_cfg.get("localize_root", False))
     phase_mode = str(obs_cfg.get("phase_obs", "reference") or "reference")
     zero_reference_obs = bool(obs_cfg.get("zero_reference_obs", config.get("amp", {}).get("zero_reference_obs", False)))
-    phase = phase_idx.float() * (2.0 * torch.pi / float(reference["length"]))
+    phase_period_steps = max(1.0, float(obs_cfg.get("phase_period_steps", reference["length"])))
+    phase = torch.remainder(phase_idx.float(), phase_period_steps) * (
+        2.0 * torch.pi / float(phase_period_steps)
+    )
     phase_features = torch.stack([torch.sin(phase), torch.cos(phase)], dim=1)
     if phase_mode in {"none", "zero", "disabled"}:
         phase_features = torch.zeros_like(phase_features)
@@ -690,12 +701,17 @@ def build_policy_obs_tensor(
         foot_features,
     ]
     future_steps = max(0, int(config.get("imitation", {}).get("reference_future_steps", 0) or 0))
+    future_stride = max(
+        1.0,
+        float(config.get("imitation", {}).get("reference_future_stride_steps", 1.0) or 1.0),
+    )
     future_dropout_prob = max(0.0, min(1.0, float(config.get("imitation", {}).get("current_future_obs_dropout_prob", 0.0) or 0.0)))
     future_keep_mask = None
     if future_steps > 0 and future_dropout_prob > 0.0:
         future_keep_mask = (torch.rand((qpos.shape[0], 1), dtype=torch.float32, device=qpos.device) >= future_dropout_prob).float()
     for offset in range(1, future_steps + 1):
-        future_phase = reference_index(target_phase + offset, reference, config)
+        future_offset = max(1, int(round(float(offset) * future_stride)))
+        future_phase = reference_index(target_phase + future_offset, reference, config)
         future_q, _future_dq = reference_q_dq_tensor(
             reference,
             future_phase,

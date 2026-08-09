@@ -64,6 +64,11 @@ def save_expert_checkpoint_set(
     def save(path: Path, modules: dict[str, Any], extra: dict[str, Any]) -> None:
         save_checkpoint(path, payload={**payload, **extra}, **modules)
 
+    if not hard_switch.enabled:
+        save(base_path, primary, {})
+        save(outdir / "latest.pt", primary, {})
+        return base_path
+
     if not hard_switch.train_both:
         save(base_path, primary, {})
         save(outdir / "latest.pt", primary, {})
@@ -105,6 +110,87 @@ def save_expert_checkpoint_set(
         save(outdir / "latest_U.pt", uphill, extra)
     return base_path
 
+def save_route_moe_checkpoint_set(
+    *,
+    outdir: Path,
+    global_step: int,
+    payload: dict[str, Any],
+    route_moe: Any,
+) -> Path:
+    """Persist one checkpoint per route expert."""
+    if not route_moe.enabled or not route_moe.experts:
+        raise ValueError("route MoE checkpoint save requires enabled experts")
+    first_path: Path | None = None
+    for index, expert in enumerate(route_moe.experts):
+        modules = {
+            "actor": expert.actor,
+            "qf1": expert.qf1,
+            "qf2": expert.qf2,
+            "qf1_target": expert.qf1_target,
+            "qf2_target": expert.qf2_target,
+            "actor_optimizer": expert.actor_optimizer,
+            "q_optimizer": expert.q_optimizer,
+            "alpha_optimizer": expert.alpha_optimizer,
+            "log_alpha": expert.log_alpha,
+        }
+        extra = {
+            "expert_name": expert.name,
+            "route_expert_index": index,
+            "obs_normalizer": expert.normalizer.state_dict(),
+        }
+        numbered = outdir / f"agent_step_{global_step}_{expert.name}.pt"
+        latest = outdir / f"latest_{expert.name}.pt"
+        save_checkpoint(numbered, payload={**payload, **extra}, **modules)
+        save_checkpoint(latest, payload={**payload, **extra}, **modules)
+        if index == 0:
+            first_path = numbered
+            save_checkpoint(
+                outdir / "latest.pt",
+                payload={**payload, **extra},
+                **modules,
+            )
+    if first_path is None:
+        raise RuntimeError("route MoE checkpoint set had no expert")
+    return first_path
+
+
+def save_route_moe_snapshot_set(
+    *,
+    outdir: Path,
+    global_step: int,
+    payload: dict[str, Any],
+    route_moe: Any,
+) -> Path:
+    """Overwrite a temporary route checkpoint set used only by video export."""
+    if not route_moe.enabled or not route_moe.experts:
+        raise ValueError("route MoE snapshot save requires enabled experts")
+    first_path: Path | None = None
+    for index, expert in enumerate(route_moe.experts):
+        modules = {
+            "actor": expert.actor,
+            "qf1": expert.qf1,
+            "qf2": expert.qf2,
+            "qf1_target": expert.qf1_target,
+            "qf2_target": expert.qf2_target,
+            "actor_optimizer": expert.actor_optimizer,
+            "q_optimizer": expert.q_optimizer,
+            "alpha_optimizer": expert.alpha_optimizer,
+            "log_alpha": expert.log_alpha,
+        }
+        extra = {
+            "expert_name": expert.name,
+            "route_expert_index": index,
+            "obs_normalizer": expert.normalizer.state_dict(),
+            "video_snapshot_global_step": int(global_step),
+        }
+        path = outdir / f"video_snapshot_{expert.name}.pt"
+        save_checkpoint(path, payload={**payload, **extra}, **modules)
+        if first_path is None:
+            first_path = path
+    if first_path is None:
+        raise RuntimeError("route MoE snapshot set had no expert")
+    return first_path
+
 def build_sac_actor_for_checkpoint(
     *,
     checkpoint: dict[str, Any],
@@ -137,6 +223,17 @@ def build_sac_actor_for_checkpoint(
     ).to(device)
     normalizer_spec = gated_spec["metadata"]
     if bool(run_cfg.get("symmetric_policy", sac_cfg.get("symmetric_policy", False))):
+        half_cycle_run_cfg = run_cfg.get(
+            "half_cycle_canonical_policy",
+            sac_cfg.get("half_cycle_canonical_policy", {}),
+        )
+        if not isinstance(half_cycle_run_cfg, dict):
+            half_cycle_run_cfg = {}
+        half_cycle_phase_indices: tuple[int, int] | None = None
+        if bool(half_cycle_run_cfg.get("enabled", False)):
+            phase_bounds = gated_spec["metadata"]["phase"]
+            half_cycle_phase_indices = (int(phase_bounds[0]), int(phase_bounds[0]) + 1)
+        expose_canonical_phase = bool(half_cycle_run_cfg.get("expose_canonical_phase", True))
         mirror_spec = build_sagittal_mirror_spec(
             model,
             config,
@@ -150,6 +247,8 @@ def build_sac_actor_for_checkpoint(
             obs_sign=mirror_spec["obs_sign"],
             act_perm=mirror_spec["act_perm"],
             act_sign=mirror_spec["act_sign"],
+            half_cycle_phase_indices=half_cycle_phase_indices,
+            expose_canonical_phase=expose_canonical_phase,
         ).to(device)
     else:
         actor = base_actor
@@ -183,6 +282,49 @@ def load_shape_compatible_state_dict(module: nn.Module, state_dict: dict[str, to
     }
     result = module.load_state_dict(filtered, strict=False)
     return not result.missing_keys and not result.unexpected_keys
+
+def load_actor_warmstart_state_dict(
+    module: nn.Module,
+    state_dict: dict[str, torch.Tensor],
+    *,
+    action_dims: int,
+) -> dict[str, Any]:
+    """Load matching actor tensors and crop action heads to a smaller action space."""
+    target = module.state_dict()
+    merged = {key: value.clone() for key, value in target.items()}
+    exact_keys: list[str] = []
+    cropped_keys: list[str] = []
+    action_head_suffixes = (
+        "mean.weight",
+        "mean.bias",
+        "logstd.weight",
+        "logstd.bias",
+    )
+    for key, source_value in state_dict.items():
+        target_value = target.get(key)
+        if target_value is None:
+            continue
+        source_value = source_value.to(device=target_value.device, dtype=target_value.dtype)
+        if source_value.shape == target_value.shape:
+            merged[key] = source_value
+            exact_keys.append(key)
+            continue
+        if not key.endswith(action_head_suffixes):
+            continue
+        if source_value.ndim != target_value.ndim or source_value.shape[1:] != target_value.shape[1:]:
+            continue
+        count = min(int(action_dims), int(source_value.shape[0]), int(target_value.shape[0]))
+        if count <= 0:
+            continue
+        merged[key][:count].copy_(source_value[:count])
+        cropped_keys.append(key)
+    module.load_state_dict(merged, strict=True)
+    return {
+        "exact_key_count": len(exact_keys),
+        "cropped_key_count": len(cropped_keys),
+        "cropped_keys": cropped_keys,
+        "action_dims": int(action_dims),
+    }
 
 def _range_from_obs_spec(spec: dict[str, Any] | None, name: str) -> tuple[int, int] | None:
     if not isinstance(spec, dict):

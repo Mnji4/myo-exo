@@ -6,9 +6,9 @@ __pycache__/
 
 # Local environments
 .env
-.venv/
-venv/
-env/
+/.venv/
+/venv/
+/env/
 
 # Experiment outputs
 results/
@@ -18,6 +18,13 @@ reference_videos/
 runs/
 wandb/
 generated_models/
+analysis_exports/
+tensorboard_runs/
+logs/
+recovery_banks/
+imported_checkpoints/
+.cache/
+cleanup_checkpoint_plan.csv
 MUJOCO_LOG.TXT
 
 # Large learned artifacts
@@ -33,4 +40,3 @@ events.out.tfevents*
 *secret*
 *.pem
 *.key
-

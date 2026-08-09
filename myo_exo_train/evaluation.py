@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import json
 import os
@@ -42,6 +43,7 @@ from myo_exo_train.env.observation import (
     reset_reference_phase_from_x,
 )
 from myo_exo_train.env.runner import MJWarpMuscleRunner
+from myo_exo_train.env.reward import apply_reward_schedule
 
 def configured_video_phases(
     config: dict[str, Any],
@@ -106,6 +108,7 @@ def maybe_launch_checkpoint_video_export(
     args: argparse.Namespace,
     checkpoint_path: Path,
     global_step: int,
+    run_start_global_step: int,
     nworld: int,
     active_process: subprocess.Popen | None,
 ) -> tuple[subprocess.Popen | None, dict[str, Any]]:
@@ -144,11 +147,100 @@ def maybe_launch_checkpoint_video_export(
         }
 
     every_steps = int(export_cfg.get("every_steps", args.checkpoint_every) or 0)
-    if every_steps > 0 and int(global_step) % every_steps >= int(nworld):
+    interval_step = int(global_step)
+    if bool(export_cfg.get("relative_to_run_start", False)):
+        interval_step -= int(run_start_global_step)
+    if every_steps > 0 and interval_step % every_steps >= int(nworld):
         return active_process, {"global_step": int(global_step), "status": "skipped_interval"}
 
     export_mode = str(export_cfg.get("mode", "")).lower()
-    if export_mode == "hard_switch_moe":
+    if export_mode in {"mjwarp", "route_moe"}:
+        phases = export_cfg.get("phase_indices", config.get("video", {}).get("phase_indices", [0]))
+        if not isinstance(phases, list) or not phases:
+            phases = [0]
+        starts = export_cfg.get("starts", [])
+        if export_mode != "route_moe" or not isinstance(starts, list) or not starts:
+            starts = [{"name": f"phase{int(phase)}", "phase": int(phase)} for phase in phases]
+        route_cfg = config.get("route_moe", {})
+        route_specs = list(route_cfg.get("experts", []))
+        route_boundaries = list(route_cfg.get("boundaries", []))
+        route_checkpoint_stem = checkpoint_path.stem
+        if route_specs:
+            first_suffix = f"_{route_specs[0]['name']}"
+            if route_checkpoint_stem.endswith(first_suffix):
+                route_checkpoint_stem = route_checkpoint_stem[
+                    : -len(first_suffix)
+                ]
+        commands = [
+            "set -euo pipefail",
+            f"echo $$ > {shlex.quote(str(lock_file.resolve()))}",
+            f"trap 'rm -f {shlex.quote(str(lock_file.resolve()))}' EXIT",
+        ]
+        for start in starts:
+            phase = int(start.get("phase", 0))
+            start_name = "".join(
+                character if character.isalnum() or character in "-_" else "_"
+                for character in str(start.get("name", f"phase{phase}"))
+            )
+            out_path = (
+                outdir
+                / "videos"
+                / f"step_{int(global_step):09d}_{start_name}_ref_overlay.mp4"
+            )
+            cmd_parts = [
+                shlex.quote(sys.executable),
+                shlex.quote(str(ROOT / "scripts" / "render_mjwarp_sac_reference_overlay.py")),
+                "--config", shlex.quote(str(args.config.resolve())),
+                "--checkpoint", shlex.quote(str(checkpoint_path.resolve())),
+                "--reference", shlex.quote(str(args.reference.resolve())),
+                "--out", shlex.quote(str(out_path.resolve())),
+                "--phase", str(int(phase)),
+                "--steps", str(int(export_cfg.get("video_steps", args.video_steps))),
+                "--height", str(int(export_cfg.get("video_height", args.video_height))),
+                "--width", str(int(export_cfg.get("video_width", args.video_width))),
+                "--camera-distance", str(float(export_cfg.get("video_camera_distance", args.video_camera_distance))),
+                "--camera-height", str(float(export_cfg.get("video_camera_height", args.video_camera_height))),
+                "--camera-azimuth", str(float(export_cfg.get("video_camera_azimuth", getattr(args, "video_camera_azimuth", 135.0)))),
+                "--camera-elevation", str(float(export_cfg.get("video_camera_elevation", getattr(args, "video_camera_elevation", -30.0)))),
+                "--device", shlex.quote(str(export_cfg.get("device", "cuda"))),
+                "--nconmax", str(int(export_cfg.get("nconmax", args.nconmax))),
+                "--njmax", str(int(export_cfg.get("njmax", args.njmax))),
+            ]
+            if export_mode == "route_moe":
+                for spec in route_specs:
+                    expert_name = str(spec["name"])
+                    expert_path = checkpoint_path.with_name(
+                        f"{route_checkpoint_stem}_{expert_name}{checkpoint_path.suffix}"
+                    )
+                    cmd_parts.extend(
+                        [
+                            "--route-expert",
+                            shlex.quote(f"{expert_name}={expert_path.resolve()}"),
+                        ]
+                    )
+                for boundary in route_boundaries:
+                    cmd_parts.extend(
+                        ["--route-boundary", str(float(boundary["x"]))]
+                    )
+                cmd_parts.append("--label-expert")
+            if bool(export_cfg.get("ignore_out_of_trajectory_done", False)):
+                cmd_parts.append("--ignore-out-of-trajectory-done")
+            if bool(export_cfg.get("use_config_initial_activation", False)):
+                cmd_parts.append("--use-config-initial-activation")
+            bank_value = str(start.get("bank", "") or "")
+            if bank_value:
+                bank_path = resolve_root_path(bank_value)
+                cmd_parts.extend(
+                    [
+                        "--bank",
+                        shlex.quote(str(bank_path.resolve())),
+                        "--bank-index",
+                        str(int(start.get("row", 0))),
+                    ]
+                )
+            commands.append(" ".join(cmd_parts))
+        command = ["bash", "-lc", "\n".join(commands)]
+    elif export_mode == "hard_switch_moe":
         uphill_value = str(export_cfg.get("uphill_checkpoint", ""))
         if uphill_value == "__current_U__":
             uphill_path = checkpoint_path.with_name(f"{checkpoint_path.stem}_U{checkpoint_path.suffix}")
@@ -164,7 +256,11 @@ def maybe_launch_checkpoint_video_export(
         phases = export_cfg.get("phase_indices", config.get("video", {}).get("phase_indices", [0]))
         if not isinstance(phases, list) or not phases:
             phases = [0]
-        commands: list[str] = ["set -euo pipefail", f"echo $$ > {shlex.quote(str(lock_file.resolve()))}"]
+        commands: list[str] = [
+            "set -euo pipefail",
+            f"echo $$ > {shlex.quote(str(lock_file.resolve()))}",
+            f"trap 'rm -f {shlex.quote(str(lock_file.resolve()))}' EXIT",
+        ]
         for phase in phases:
             out_path = outdir / f"step_{int(global_step):09d}_hard_switch_moe_phase{int(phase)}.mp4"
             cmd_parts = [
@@ -219,7 +315,6 @@ def maybe_launch_checkpoint_video_export(
                     ]
                 )
             commands.append(" ".join(cmd_parts))
-        commands.append(f"rm -f {shlex.quote(str(lock_file.resolve()))}")
         command = ["bash", "-lc", "\n".join(commands)]
     else:
         phases = export_cfg.get("phase_indices", config.get("video", {}).get("phase_indices", []))
@@ -257,10 +352,14 @@ def maybe_launch_checkpoint_video_export(
             command.extend(["--phase", str(int(phase))])
 
     log_path = outdir / f"export_step_{int(global_step):09d}.log"
+    export_env = os.environ.copy()
+    export_env.setdefault("MUJOCO_GL", "egl")
+    export_env.setdefault("PYOPENGL_PLATFORM", "egl")
     with log_path.open("ab") as log_file:
         process = subprocess.Popen(
             command,
             cwd=str(ROOT),
+            env=export_env,
             stdout=log_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -282,8 +381,24 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def append_csv(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists()
+    fields = list(row.keys())
+    if exists:
+        with path.open("r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            existing_fields = list(reader.fieldnames or [])
+            if any(field not in existing_fields for field in fields):
+                old_rows = list(reader)
+                fields = existing_fields + [field for field in fields if field not in existing_fields]
+                temp_path = path.with_suffix(path.suffix + ".tmp")
+                with temp_path.open("w", newline="", encoding="utf-8") as out:
+                    writer = csv.DictWriter(out, fieldnames=fields)
+                    writer.writeheader()
+                    writer.writerows(old_rows)
+                temp_path.replace(path)
+            else:
+                fields = existing_fields
     with path.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        writer = csv.DictWriter(f, fieldnames=fields)
         if not exists:
             writer.writeheader()
         writer.writerow(row)
@@ -316,40 +431,463 @@ def evaluate(
     device: torch.device,
     update: int,
     global_step: int,
+    run_start_global_step: int = 0,
 ) -> dict[str, Any]:
+    runner_config = copy.deepcopy(config)
+    evaluation_cfg = runner_config.get("evaluation", {})
+    evaluation_episode_steps = int(
+        evaluation_cfg.get("episode_steps", int(args.eval_steps))
+    )
+    runner_config.setdefault("reset", {})["episode_steps"] = evaluation_episode_steps
+    runner_config.setdefault("human_energy_objective", {})[
+        "joint_cocontraction_detailed_measure"
+    ] = True
+    evaluation_seed = int(evaluation_cfg.get("seed", int(args.seed) + 10000))
     runner = MJWarpMuscleRunner(
         model=model,
         data=data,
-        config=config,
+        config=runner_config,
         reference=reference,
         nworld=int(args.eval_worlds),
         nconmax=int(args.nconmax),
         njmax=int(args.njmax),
-        seed=int(args.seed) + 10000 + update,
+        seed=evaluation_seed,
         device=device,
     )
+    configured_reward_step = evaluation_cfg.get("reward_schedule_step")
+    if configured_reward_step is None:
+        configured_reward_step = getattr(args, "total_timesteps", None)
+    if configured_reward_step is None:
+        configured_reward_step = runner_config.get(
+            "sac", runner_config.get("ppo", {})
+        ).get("total_timesteps")
+    if configured_reward_step is None:
+        configured_reward_step = global_step
+    evaluation_reward_step = int(configured_reward_step)
+    apply_reward_schedule(
+        runner_config,
+        runner,
+        global_step=evaluation_reward_step,
+        run_start_global_step=run_start_global_step,
+    )
+    term_weights = dict(runner.myoassist_dense_weights)
+    term_weights.update(
+        {
+            "human_energy_activation_l2_penalty": float(
+                runner.human_energy_activation_weight
+            ),
+            "human_energy_hip_activation_l2_penalty": float(
+                runner.human_energy_hip_activation_weight
+            ),
+            "human_energy_hip_torque_l1_penalty": float(
+                runner.human_energy_hip_torque_weight
+            ),
+            "human_energy_hip_cocontraction_penalty": float(
+                runner.human_energy_hip_cocontraction_weight
+            ),
+            "human_energy_hip_opposition_penalty": float(
+                runner.human_energy_hip_opposition_weight
+            ),
+            "human_energy_joint_cocontraction_penalty": float(
+                runner.human_energy_joint_cocontraction_weight
+            ),
+        }
+    )
+    configured_terms = evaluation_cfg.get("representative_reward_terms")
+    if configured_terms == "all_weighted":
+        representative_terms = sorted(
+            name
+            for name, weight in term_weights.items()
+            if float(weight) != 0.0
+        )
+    elif configured_terms is None:
+        preferred_terms = (
+            "forward_reward",
+            "qpos_imitation_rewards",
+            "qvel_imitation_rewards",
+            "full_qpos_imitation_rewards",
+            "full_qvel_imitation_rewards",
+            "muscle_activation_penalty",
+            "muscle_activation_diff_penalty",
+            "foot_force_penalty",
+            "joint_constraint_force_penalty",
+        )
+        representative_terms = [
+            name
+            for name in preferred_terms
+            if float(term_weights.get(name, 0.0)) != 0.0
+        ]
+    else:
+        representative_terms = [
+            str(name)
+            for name in configured_terms
+            if float(term_weights.get(str(name), 0.0)) != 0.0
+        ]
     obs = runner.obs()
-    reward_sum = torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
-    done_count = torch.zeros((), dtype=torch.float32, device=device)
-    fall_count = torch.zeros((), dtype=torch.float32, device=device)
-    qvel_count = torch.zeros((), dtype=torch.float32, device=device)
+    first_episode_x_align_mask = runner.x_align_mask.detach().clone()
+    first_episode_done = torch.zeros(args.eval_worlds, dtype=torch.bool, device=device)
+    first_episode_fell = torch.zeros(args.eval_worlds, dtype=torch.bool, device=device)
+    first_episode_qvel_done = torch.zeros(args.eval_worlds, dtype=torch.bool, device=device)
+    first_episode_return = torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+    first_episode_length = torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+    first_episode_displacement = torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+    first_episode_velocity_sum = torch.zeros(
+        args.eval_worlds, dtype=torch.float32, device=device
+    )
+    distribution_terms = list(
+        evaluation_cfg.get("reward_distribution_terms", representative_terms)
+    )
+    distribution_samples: dict[str, list[torch.Tensor]] = {
+        "total_reward": []
+    }
+    distribution_samples.update({str(name): [] for name in distribution_terms})
+    representative_raw_returns = {
+        name: torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+        for name in representative_terms
+    }
+    representative_contribution_returns = {
+        name: torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+        for name in representative_terms
+    }
+    gait_diagnostic_names = (
+        "gait_landing_event",
+        "gait_cycle_event",
+        "gait_half_cycle_event",
+        "gait_alternating_event",
+        "gait_repeated_side_event",
+        "gait_cycle_interval_steps",
+        "gait_half_cycle_interval_steps",
+        "gait_cycle_interval_abs_error_steps",
+        "gait_half_cycle_interval_abs_error_steps",
+        "gait_half_cycle_balance_event",
+        "gait_half_cycle_balance_abs_error_steps",
+        "gait_dense_half_cycle_valid",
+        "gait_dense_half_cycle_pose_rmse",
+        "gait_dense_half_cycle_velocity_rmse",
+        "gait_dense_half_cycle_activation_rmse",
+        "gait_dense_half_cycle_force_rmse_n",
+        "gait_sequence_half_cycle_valid",
+        "gait_sequence_half_cycle_pose_rmse",
+        "gait_sequence_half_cycle_velocity_rmse",
+        "gait_sequence_half_cycle_activation_rmse",
+        "gait_sequence_half_cycle_force_rmse_n",
+        "gait_phase_force_target_valid",
+        "gait_phase_force_target_rmse_n",
+        "gait_stance_balance_event",
+        "gait_stance_impulse_relative_error",
+        "gait_stance_duration_abs_error_steps",
+        "gait_stance_peak_force_relative_error",
+    )
+    gait_diagnostic_returns = {
+        name: torch.zeros(args.eval_worlds, dtype=torch.float32, device=device)
+        for name in gait_diagnostic_names
+    }
     for _ in range(int(args.eval_steps)):
+        active = ~first_episode_done
         action, _, _, _ = agent.get_action_and_value(obs_normalizer.normalize(obs), deterministic=True)
-        obs, reward, _, terms = runner.step(action)
-        reward_sum += reward
-        done_count += terms["done_count"].sum()
-        fall_count += terms["fall_done"].sum()
-        qvel_count += terms["qvel_done"].sum()
-    return {
+        obs, reward, done, terms = runner.step(action)
+        first_episode_return += reward * active.float()
+        first_episode_velocity_sum += terms["pelvis_tx_velocity"].detach() * active.float()
+        first_done_now = done & (~first_episode_done)
+        if bool(first_done_now.any().item()):
+            first_episode_length[first_done_now] = terms["episode_length_done_sum"][first_done_now]
+            first_episode_displacement[first_done_now] = terms["episode_forward_displacement_done"][first_done_now]
+            first_episode_fell[first_done_now] = terms["fall_done"][first_done_now] > 0.0
+            first_episode_qvel_done[first_done_now] = terms["qvel_done"][first_done_now] > 0.0
+            first_episode_done[first_done_now] = True
+        distribution_samples["total_reward"].append(reward.detach()[active])
+        for name in distribution_terms:
+            value = terms.get(str(name))
+            if value is not None:
+                distribution_samples[str(name)].append(value.detach()[active])
+        for name in representative_terms:
+            value = terms.get(name)
+            if value is None:
+                continue
+            raw = value.detach() * active.float()
+            representative_raw_returns[name] += raw
+            representative_contribution_returns[name] += (
+                raw * float(term_weights[name])
+            )
+        for name in gait_diagnostic_names:
+            value = terms.get(name)
+            if value is not None:
+                gait_diagnostic_returns[name] += (
+                    value.detach() * active.float()
+                )
+        if bool(first_episode_done.all().item()):
+            break
+    unfinished = ~first_episode_done
+    if bool(unfinished.any().item()):
+        first_episode_length[unfinished] = runner.episode_length[unfinished]
+        first_episode_displacement[unfinished] = (
+            runner.qpos[unfinished, runner.pelvis_tx_qpos]
+            - runner.episode_start_pelvis_tx[unfinished]
+        )
+    safe_length = torch.clamp(first_episode_length, min=1.0)
+    first_episode_reward_per_step = first_episode_return / safe_length
+    first_episode_velocity = first_episode_velocity_sum / safe_length
+    target_velocity = float(config.get("myoassist_exact", {}).get("target_velocity", 0.0))
+    result = {
         "global_step": global_step,
         "update": update,
-        "eval_mean_reward_sum": float(reward_sum.mean().item()),
-        "eval_done_rate_per_step": float((done_count / (args.eval_worlds * args.eval_steps)).item()),
-        "eval_fall_rate_per_step": float((fall_count / (args.eval_worlds * args.eval_steps)).item()),
-        "eval_qvel_done_rate_per_step": float((qvel_count / (args.eval_worlds * args.eval_steps)).item()),
-        "eval_mean_pelvis_tx": float(runner.qpos[:, runner.pelvis_tx_qpos].mean().item()),
-        "eval_mean_pelvis_height": float(runner.qpos[:, runner.pelvis_ty_qpos].mean().item()),
+        "eval_seed": evaluation_seed,
+        "eval_episode_steps": evaluation_episode_steps,
+        "eval_reward_schedule_step": evaluation_reward_step,
+        "eval_first_episode_return_mean": float(first_episode_return.mean().item()),
+        "eval_first_episode_return_std": float(
+            first_episode_return.std(unbiased=False).item()
+        ),
+        "eval_first_episode_return_min": float(first_episode_return.min().item()),
+        "eval_first_episode_return_max": float(first_episode_return.max().item()),
+        "eval_first_episode_reward_per_step_mean": float(
+            first_episode_reward_per_step.mean().item()
+        ),
+        "eval_first_episode_completed_rate": float(first_episode_done.float().mean().item()),
+        "eval_first_episode_fall_rate": float(first_episode_fell.float().mean().item()),
+        "eval_first_episode_qvel_done_rate": float(
+            first_episode_qvel_done.float().mean().item()
+        ),
+        "eval_first_episode_mean_pelvis_vx": float(first_episode_velocity.mean().item()),
+        "eval_forward_velocity_target_fraction": float(
+            first_episode_velocity.mean().item() / max(target_velocity, 1.0e-6)
+        ),
+        "eval_first_episode_duration_mean_s": float((first_episode_length.mean() * float(runner.dt)).item()),
+        "eval_first_episode_duration_min_s": float((first_episode_length.min() * float(runner.dt)).item()),
+        "eval_first_episode_duration_max_s": float((first_episode_length.max() * float(runner.dt)).item()),
+        "eval_first_episode_forward_displacement_mean_m": float(first_episode_displacement.mean().item()),
+        "eval_first_episode_forward_displacement_min_m": float(first_episode_displacement.min().item()),
+        "eval_first_episode_forward_displacement_max_m": float(first_episode_displacement.max().item()),
+        "eval_x_align_mode_rate": float(
+            first_episode_x_align_mask.float().mean().item()
+        ),
     }
+    landing_count = gait_diagnostic_returns["gait_landing_event"]
+    cycle_count = gait_diagnostic_returns["gait_cycle_event"]
+    half_cycle_count = gait_diagnostic_returns["gait_half_cycle_event"]
+    half_cycle_balance_count = gait_diagnostic_returns[
+        "gait_half_cycle_balance_event"
+    ]
+    alternating_count = gait_diagnostic_returns["gait_alternating_event"]
+    repeated_count = gait_diagnostic_returns["gait_repeated_side_event"]
+    transition_count = alternating_count + repeated_count
+    dense_half_cycle_count = gait_diagnostic_returns[
+        "gait_dense_half_cycle_valid"
+    ]
+    sequence_half_cycle_count = gait_diagnostic_returns[
+        "gait_sequence_half_cycle_valid"
+    ]
+    stance_balance_count = gait_diagnostic_returns[
+        "gait_stance_balance_event"
+    ]
+    result.update(
+        {
+            "eval_gait_landing_count_mean": float(
+                landing_count.mean().item()
+            ),
+            "eval_gait_cycle_event_count_mean": float(
+                cycle_count.mean().item()
+            ),
+            "eval_gait_half_cycle_event_count_mean": float(
+                half_cycle_count.mean().item()
+            ),
+            "eval_gait_alternation_rate": float(
+                (
+                    alternating_count.sum()
+                    / torch.clamp(transition_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_repeated_side_rate": float(
+                (
+                    repeated_count.sum()
+                    / torch.clamp(transition_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_cycle_interval_mean_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_cycle_interval_steps"
+                    ].sum()
+                    / torch.clamp(cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_half_cycle_interval_mean_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_half_cycle_interval_steps"
+                    ].sum()
+                    / torch.clamp(half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_cycle_interval_mae_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_cycle_interval_abs_error_steps"
+                    ].sum()
+                    / torch.clamp(cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_half_cycle_interval_mae_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_half_cycle_interval_abs_error_steps"
+                    ].sum()
+                    / torch.clamp(half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_half_cycle_balance_mae_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_half_cycle_balance_abs_error_steps"
+                    ].sum()
+                    / torch.clamp(half_cycle_balance_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_dense_half_cycle_pose_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_dense_half_cycle_pose_rmse"
+                    ].sum()
+                    / torch.clamp(dense_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_dense_half_cycle_velocity_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_dense_half_cycle_velocity_rmse"
+                    ].sum()
+                    / torch.clamp(dense_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_dense_half_cycle_activation_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_dense_half_cycle_activation_rmse"
+                    ].sum()
+                    / torch.clamp(dense_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_dense_half_cycle_force_rmse_n": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_dense_half_cycle_force_rmse_n"
+                    ].sum()
+                    / torch.clamp(dense_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_sequence_half_cycle_event_count_mean": float(
+                sequence_half_cycle_count.mean().item()
+            ),
+            "eval_gait_sequence_half_cycle_pose_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_sequence_half_cycle_pose_rmse"
+                    ].sum()
+                    / torch.clamp(sequence_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_sequence_half_cycle_velocity_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_sequence_half_cycle_velocity_rmse"
+                    ].sum()
+                    / torch.clamp(sequence_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_sequence_half_cycle_activation_rmse": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_sequence_half_cycle_activation_rmse"
+                    ].sum()
+                    / torch.clamp(sequence_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_sequence_half_cycle_force_rmse_n": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_sequence_half_cycle_force_rmse_n"
+                    ].sum()
+                    / torch.clamp(sequence_half_cycle_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_phase_force_target_rmse_n": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_phase_force_target_rmse_n"
+                    ].sum()
+                    / torch.clamp(
+                        gait_diagnostic_returns[
+                            "gait_phase_force_target_valid"
+                        ].sum(),
+                        min=1.0,
+                    )
+                ).item()
+            ),
+            "eval_gait_stance_balance_event_count_mean": float(
+                stance_balance_count.mean().item()
+            ),
+            "eval_gait_stance_impulse_relative_error": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_stance_impulse_relative_error"
+                    ].sum()
+                    / torch.clamp(stance_balance_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_stance_duration_mae_steps": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_stance_duration_abs_error_steps"
+                    ].sum()
+                    / torch.clamp(stance_balance_count.sum(), min=1.0)
+                ).item()
+            ),
+            "eval_gait_stance_peak_force_relative_error": float(
+                (
+                    gait_diagnostic_returns[
+                        "gait_stance_peak_force_relative_error"
+                    ].sum()
+                    / torch.clamp(stance_balance_count.sum(), min=1.0)
+                ).item()
+            ),
+        }
+    )
+    representative_returns: dict[str, dict[str, float]] = {}
+    for name in representative_terms:
+        raw_return = representative_raw_returns[name]
+        contribution_return = representative_contribution_returns[name]
+        representative_returns[name] = {
+            "weight": float(term_weights[name]),
+            "raw_return_mean": float(raw_return.mean().item()),
+            "contribution_return_mean": float(
+                contribution_return.mean().item()
+            ),
+            "contribution_return_std": float(
+                contribution_return.std(unbiased=False).item()
+            ),
+        }
+        result[f"eval_reward_term_{name}_return_mean"] = float(
+            contribution_return.mean().item()
+        )
+    result["eval_reward_term_returns"] = representative_returns
+    distributions: dict[str, dict[str, float]] = {}
+    for name, chunks in distribution_samples.items():
+        if not chunks:
+            continue
+        values = torch.cat(chunks).float()
+        weight = 1.0 if name == "total_reward" else float(term_weights.get(name, 1.0))
+        contribution = values * weight
+        distributions[name] = {
+            "weight": weight,
+            "raw_mean": float(values.mean().item()),
+            "contribution_mean": float(contribution.mean().item()),
+            "contribution_std": float(contribution.std(unbiased=False).item()),
+            "contribution_p10": float(torch.quantile(contribution, 0.10).item()),
+            "contribution_p50": float(torch.quantile(contribution, 0.50).item()),
+            "contribution_p90": float(torch.quantile(contribution, 0.90).item()),
+        }
+    result["eval_reward_distributions"] = distributions
+    return result
 
 def set_cpu_reference_state(
     model: mujoco.MjModel,
@@ -527,6 +1065,7 @@ def render_policy_video(
         mujoco.mj_forward(model, data)
         video_start_label = f"bankrow{row:04d}_phase{phase}_{reference_phase_label(reference, phase)}"
 
+    initial_pelvis_tx = float(data.qpos[pelvis_tx_qpos])
     frames = []
     rows: list[dict[str, Any]] = []
     fell = False
@@ -633,8 +1172,14 @@ def render_policy_video(
     label = video_start_label
     video_path = video_dir / f"policy_update_{update:05d}_step_{global_step:09d}_{label}.mp4"
     diagnostic_path = video_dir / f"policy_update_{update:05d}_step_{global_step:09d}_{label}_diagnostics.csv"
-    imageio.mimsave(video_path, frames, fps=30)
+    imageio.mimsave(video_path, frames, fps=int(config["control"]["control_hz"]))
     write_csv_rows(diagnostic_path, rows)
+    final_pelvis_tx = float(data.qpos[pelvis_tx_qpos])
+    elapsed_time = max(float(data.time), 1.0e-6)
+    forward_progress = final_pelvis_tx - initial_pelvis_tx
+    mean_forward_velocity = forward_progress / elapsed_time
+    target_velocity = float(config.get("myoassist_exact", {}).get("target_velocity", 0.0))
+    target_fraction = mean_forward_velocity / max(target_velocity, 1.0e-6)
     return {
         "global_step": global_step,
         "update": update,
@@ -642,7 +1187,12 @@ def render_policy_video(
         "video_diagnostics": str(diagnostic_path),
         "video_frames": len(frames),
         "video_fell": fell,
-        "video_final_pelvis_tx": float(data.qpos[pelvis_tx_qpos]),
+        "video_initial_pelvis_tx": initial_pelvis_tx,
+        "video_final_pelvis_tx": final_pelvis_tx,
+        "video_forward_progress_m": forward_progress,
+        "video_mean_forward_velocity": mean_forward_velocity,
+        "video_forward_velocity_target_fraction": target_fraction,
+        "video_walking": bool(target_fraction >= 0.5),
         "video_final_pelvis_height": float(data.qpos[pelvis_ty_qpos]),
         "video_max_qvel": max((float(row["max_abs_qvel"]) for row in rows), default=0.0),
     }

@@ -11,8 +11,9 @@ import torch
 
 from myo_exo_train.env.model import (
     FOOT_SITE_NAMES, RESET_JOINTS, ROOT, TRACK_JOINTS,
-    course_height_np, model_foot_site_names, semantic_qpos_index,
+    apply_joint_equalities_np, course_height_np, model_foot_site_names, semantic_qpos_index,
     semantic_qvel_index, site_forward_coord_np, site_id, source_terrain_height_np,
+    terrain_forward_axis,
 )
 
 def scheduled_value(schedule: dict[str, Any] | None, default: float, update: int) -> float:
@@ -106,7 +107,10 @@ def load_reference(
 
     full_reset_qpos_np = sample_matrix("qpos_full", int(model.nq))
     full_reset_qvel_np = sample_matrix("qvel_full", int(model.nv))
-    if full_reset_qpos_np is None or full_reset_qvel_np is None:
+    allow_partial_full_state = bool(
+        config.get("reference_reset", {}).get("allow_partial_full_state", False)
+    )
+    if (full_reset_qpos_np is None or full_reset_qvel_np is None) and not allow_partial_full_state:
         raise ValueError("reference must contain qpos_full and qvel_full for complete-state resets")
 
     def reference_series_for_joint(joint: str, *, kind: str, index: int) -> np.ndarray:
@@ -165,11 +169,40 @@ def load_reference(
     pelvis_tx_ref_np = reset_q_np[:, pelvis_tx_reset_col].copy()
     reset_q_np[:, pelvis_tx_reset_col] = 0.0
 
+    if full_reset_qpos_np is None or full_reset_qvel_np is None:
+        full_reset_qpos_np = np.zeros((len(indices), int(model.nq)), dtype=np.float32)
+        full_reset_qvel_np = np.zeros((len(indices), int(model.nv)), dtype=np.float32)
+        state = mujoco.MjData(model)
+        for frame in range(len(indices)):
+            mujoco.mj_resetData(model, state)
+            state.qpos[reset_qpos_indices] = reset_q_np[frame]
+            state.qvel[reset_qvel_indices] = reset_dq_np[frame]
+            apply_joint_equalities_np(model, state)
+            full_reset_qpos_np[frame] = state.qpos
+            full_reset_qvel_np[frame] = state.qvel
+
     foot_site_names = model_foot_site_names(model, config)
     foot_site_indices = [site_id(model, name) for name in foot_site_names]
+    keypoint_cfg = config.get("keypoint_imitation", {})
+    keypoint_body_names = [
+        str(name)
+        for name in keypoint_cfg.get("body_names", [])
+        if str(name)
+    ]
+    keypoint_body_indices = []
+    for name in keypoint_body_names:
+        body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+        if body_id < 0:
+            raise KeyError(f"Missing keypoint imitation body: {name}")
+        keypoint_body_indices.append(int(body_id))
     ref_data = mujoco.MjData(model)
     foot_site_xpos = np.zeros((len(indices), len(foot_site_names), 3), dtype=np.float32)
+    keypoint_body_xpos = np.zeros(
+        (len(indices), len(keypoint_body_indices), 3),
+        dtype=np.float32,
+    )
     pelvis_tx_index = semantic_qpos_index(model, "pelvis_tx")
+    forward_dim = 1 if terrain_forward_axis(config) == "y" else 0
     for frame in range(len(indices)):
         mujoco.mj_resetData(model, ref_data)
         ref_data.qpos[:] = full_reset_qpos_np[frame]
@@ -179,6 +212,10 @@ def load_reference(
         foot_frame = ref_data.site_xpos[foot_site_indices].copy()
         foot_frame[:, 0] = site_forward_coord_np(foot_frame, config) - float(ref_data.qpos[pelvis_tx_index])
         foot_site_xpos[frame] = foot_frame
+        if keypoint_body_indices:
+            keypoint_frame = ref_data.xpos[keypoint_body_indices].copy()
+            keypoint_frame[:, forward_dim] -= float(ref_data.qpos[pelvis_tx_index])
+            keypoint_body_xpos[frame] = keypoint_frame
 
     contact_cfg = config.get("reference_contact", {})
     foot_site_world = foot_site_xpos.copy()
@@ -216,6 +253,17 @@ def load_reference(
         "foot_site_min_z": torch.tensor(np.amin(foot_site_xpos[:, :, 2], axis=0), dtype=torch.float32, device=device),
         "foot_contact_ref": torch.tensor(foot_contact_ref, dtype=torch.bool, device=device),
         "foot_speed_ref": torch.tensor(foot_site_speed, dtype=torch.float32, device=device),
+        "keypoint_body_names": keypoint_body_names,
+        "keypoint_body_indices": torch.tensor(
+            keypoint_body_indices,
+            dtype=torch.long,
+            device=device,
+        ),
+        "keypoint_body_ref": torch.tensor(
+            keypoint_body_xpos,
+            dtype=torch.float32,
+            device=device,
+        ),
         "pelvis_tx_ref": torch.tensor(pelvis_tx_ref_np, dtype=torch.float32, device=device),
         "pelvis_tx_qpos": pelvis_tx_index,
         "pelvis_ty_qpos": semantic_qpos_index(model, "pelvis_ty"),
@@ -276,6 +324,7 @@ def apply_reference_course_transform(ref: dict[str, Any], config: dict[str, Any]
     ref["reset_q_ref"] = ref["reset_q_ref"].clone()
     ref["q_ref"] = ref["q_ref"].clone()
     ref["foot_site_ref"] = ref["foot_site_ref"].clone()
+    ref["keypoint_body_ref"] = ref["keypoint_body_ref"].clone()
     full_reset_qpos = ref.get("full_reset_qpos")
     if full_reset_qpos is not None:
         ref["full_reset_qpos"] = full_reset_qpos.clone()
@@ -336,6 +385,7 @@ def apply_reference_course_transform(ref: dict[str, Any], config: dict[str, Any]
     if ref.get("full_reset_qpos") is not None:
         ref["full_reset_qpos"][:, int(ref["pelvis_ty_qpos"])] += total_delta
     ref["foot_site_ref"][:, :, 2] += total_delta[:, None]
+    ref["keypoint_body_ref"][:, :, 2] += total_delta[:, None]
     ref["foot_site_min_z"] = torch.amin(ref["foot_site_ref"][:, :, 2], dim=0)
     foot_ref_post = ref["foot_site_ref"].detach().cpu().numpy().astype(np.float64)
     pelvis_x_post = ref["reset_q_ref"][:, RESET_JOINTS.index("pelvis_tx")].detach().cpu().numpy().astype(np.float64)
@@ -350,9 +400,47 @@ def apply_reference_course_transform(ref: dict[str, Any], config: dict[str, Any]
         foot_terrain_post = np.zeros_like(foot_world_post[:, :, 0])
     foot_clearance_post = foot_world_post[:, :, 2] - foot_terrain_post
     ref["foot_speed_ref"] = torch.tensor(foot_speed_post, dtype=torch.float32, device=device)
-    ref["foot_contact_ref"] = torch.tensor(
+    foot_contact_post = (
         (foot_clearance_post < float(contact_cfg.get("z_threshold", 0.025)))
-        & (foot_speed_post < float(contact_cfg.get("speed_threshold", 0.4))),
+        & (foot_speed_post < float(contact_cfg.get("speed_threshold", 0.4)))
+    )
+    if bool(contact_cfg.get("stair_speed_only_enabled", False)):
+        speed_threshold = float(
+            contact_cfg.get(
+                "stair_speed_threshold",
+                contact_cfg.get("speed_threshold", 0.4),
+            )
+        )
+        label_ranges = ref["metadata"].get("label_ranges", {})
+        labels = contact_cfg.get(
+            "stair_speed_only_labels",
+            ["stairup", "stairdown"],
+        )
+        for label in labels:
+            bounds = label_ranges.get(str(label), {})
+            start = max(0, int(bounds.get("start", 0)))
+            end = min(int(ref["length"]), int(bounds.get("end", start)))
+            if end <= start:
+                continue
+            stair_contact = foot_speed_post[start:end] < speed_threshold
+            if bool(contact_cfg.get("stair_ensure_support", True)):
+                side_split = max(1, stair_contact.shape[1] // 2)
+                no_support = ~stair_contact.any(axis=1)
+                for local_frame in np.flatnonzero(no_support):
+                    site_speed = foot_speed_post[start + local_frame]
+                    right_site = int(np.argmin(site_speed[:side_split]))
+                    left_site = side_split + int(
+                        np.argmin(site_speed[side_split:])
+                    )
+                    support_site = (
+                        right_site
+                        if site_speed[right_site] <= site_speed[left_site]
+                        else left_site
+                    )
+                    stair_contact[local_frame, support_site] = True
+            foot_contact_post[start:end] = stair_contact
+    ref["foot_contact_ref"] = torch.tensor(
+        foot_contact_post,
         dtype=torch.bool,
         device=device,
     )

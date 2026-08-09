@@ -574,6 +574,8 @@ class SymmetricSACActor(nn.Module):
         obs_sign: torch.Tensor,
         act_perm: torch.Tensor,
         act_sign: torch.Tensor,
+        half_cycle_phase_indices: tuple[int, int] | None = None,
+        expose_canonical_phase: bool = True,
     ):
         super().__init__()
         self.base_actor = base_actor
@@ -581,6 +583,8 @@ class SymmetricSACActor(nn.Module):
         self.register_buffer("obs_sign", obs_sign.detach().clone().float())
         self.register_buffer("act_perm", act_perm.detach().clone().long())
         self.register_buffer("act_sign", act_sign.detach().clone().float())
+        self.half_cycle_phase_indices = half_cycle_phase_indices
+        self.expose_canonical_phase = bool(expose_canonical_phase)
 
     def mirror_obs(self, obs: torch.Tensor) -> torch.Tensor:
         return obs.index_select(-1, self.obs_perm) * self.obs_sign
@@ -589,13 +593,33 @@ class SymmetricSACActor(nn.Module):
         return action.index_select(-1, self.act_perm) * self.act_sign
 
     def mirror_logstd(self, logstd: torch.Tensor) -> torch.Tensor:
-        return self.mirror_action(logstd)
+        return logstd.index_select(-1, self.act_perm)
+
+    def canonicalize_half_cycle(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.half_cycle_phase_indices is None:
+            return obs, torch.zeros(obs.shape[0], dtype=torch.bool, device=obs.device)
+        phase_sin, phase_cos = self.half_cycle_phase_indices
+        phase_angle = torch.atan2(obs[:, phase_sin], obs[:, phase_cos])
+        second_half = phase_angle < 0.0
+        canonical = torch.where(second_half[:, None], self.mirror_obs(obs), obs)
+        phase_sign = torch.where(second_half, -1.0, 1.0).to(dtype=obs.dtype)
+        canonical = canonical.clone()
+        canonical[:, phase_sin] *= phase_sign
+        canonical[:, phase_cos] *= phase_sign
+        if not self.expose_canonical_phase:
+            canonical[:, phase_sin] = 0.0
+            canonical[:, phase_cos] = 0.0
+        return canonical, second_half
 
     def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        mean0, logstd0 = self.base_actor(obs)
-        mean_m, logstd_m = self.base_actor(self.mirror_obs(obs))
+        canonical_obs, second_half = self.canonicalize_half_cycle(obs)
+        mean0, logstd0 = self.base_actor(canonical_obs)
+        mean_m, logstd_m = self.base_actor(self.mirror_obs(canonical_obs))
         mean = 0.5 * (mean0 + self.mirror_action(mean_m))
         logstd = 0.5 * (logstd0 + self.mirror_logstd(logstd_m))
+        if self.half_cycle_phase_indices is not None:
+            mean = torch.where(second_half[:, None], self.mirror_action(mean), mean)
+            logstd = torch.where(second_half[:, None], self.mirror_logstd(logstd), logstd)
         return mean, torch.clamp(logstd, LOG_STD_MIN, LOG_STD_MAX)
 
     def get_action(self, obs: torch.Tensor, deterministic: bool = False) -> tuple[torch.Tensor, torch.Tensor]:
@@ -649,6 +673,8 @@ class SymmetricSoftQNetwork(nn.Module):
         obs_sign: torch.Tensor,
         act_perm: torch.Tensor,
         act_sign: torch.Tensor,
+        half_cycle_phase_indices: tuple[int, int] | None = None,
+        expose_canonical_phase: bool = True,
     ):
         super().__init__()
         self.base_q = base_q
@@ -656,6 +682,8 @@ class SymmetricSoftQNetwork(nn.Module):
         self.register_buffer("obs_sign", obs_sign.detach().clone().float())
         self.register_buffer("act_perm", act_perm.detach().clone().long())
         self.register_buffer("act_sign", act_sign.detach().clone().float())
+        self.half_cycle_phase_indices = half_cycle_phase_indices
+        self.expose_canonical_phase = bool(expose_canonical_phase)
 
     def mirror_obs(self, obs: torch.Tensor) -> torch.Tensor:
         return obs.index_select(-1, self.obs_perm) * self.obs_sign
@@ -663,9 +691,31 @@ class SymmetricSoftQNetwork(nn.Module):
     def mirror_action(self, action: torch.Tensor) -> torch.Tensor:
         return action.index_select(-1, self.act_perm) * self.act_sign
 
+    def canonicalize_half_cycle(
+        self,
+        obs: torch.Tensor,
+        action: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.half_cycle_phase_indices is None:
+            return obs, action
+        phase_sin, phase_cos = self.half_cycle_phase_indices
+        phase_angle = torch.atan2(obs[:, phase_sin], obs[:, phase_cos])
+        second_half = phase_angle < 0.0
+        canonical_obs = torch.where(second_half[:, None], self.mirror_obs(obs), obs)
+        canonical_action = torch.where(second_half[:, None], self.mirror_action(action), action)
+        phase_sign = torch.where(second_half, -1.0, 1.0).to(dtype=obs.dtype)
+        canonical_obs = canonical_obs.clone()
+        canonical_obs[:, phase_sin] *= phase_sign
+        canonical_obs[:, phase_cos] *= phase_sign
+        if not self.expose_canonical_phase:
+            canonical_obs[:, phase_sin] = 0.0
+            canonical_obs[:, phase_cos] = 0.0
+        return canonical_obs, canonical_action
+
     def forward(self, obs: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        q0 = self.base_q(obs, action)
-        q1 = self.base_q(self.mirror_obs(obs), self.mirror_action(action))
+        canonical_obs, canonical_action = self.canonicalize_half_cycle(obs, action)
+        q0 = self.base_q(canonical_obs, canonical_action)
+        q1 = self.base_q(self.mirror_obs(canonical_obs), self.mirror_action(canonical_action))
         return 0.5 * (q0 + q1)
 
 def build_sac_q_modules_for_config(

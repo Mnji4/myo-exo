@@ -1,4 +1,4 @@
-"""Command-line entry point for 80-muscle MJWarp SAC training."""
+"""Command-line entry point for MJWarp muscle SAC training."""
 from __future__ import annotations
 
 import argparse
@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--video-camera-azimuth", type=float, default=135.0)
     parser.add_argument("--video-camera-elevation", type=float, default=-30.0)
     parser.add_argument("--render-only-video", action="store_true")
+    parser.add_argument("--eval-only", action="store_true")
     parser.add_argument("--checkpoint-every", type=int, default=8192)
     parser.add_argument("--log-every", type=int, default=8192)
     return parser

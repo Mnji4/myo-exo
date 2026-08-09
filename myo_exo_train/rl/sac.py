@@ -109,6 +109,46 @@ def episode_steps_for_step(config: dict[str, Any], global_step: int, run_start_g
             steps = int(item.get("episode_steps", steps))
     return max(1, int(steps))
 
+def recovery_reset_probability_for_step(
+    config: dict[str, Any], global_step: int, run_start_global_step: int
+) -> float:
+    recovery = config.get("recovery_reset", {})
+    probability = float(recovery.get("reset_probability", 0.0))
+    schedule = recovery.get("reset_probability_schedule", [])
+    if not isinstance(schedule, list) or not schedule:
+        return min(1.0, max(0.0, probability))
+    schedule_step = int(global_step)
+    if str(recovery.get("reset_probability_schedule_mode", "relative")) == "relative":
+        schedule_step = max(0, int(global_step) - int(run_start_global_step))
+    for item in sorted(schedule, key=lambda x: int(x.get("after_steps", 0))):
+        if schedule_step >= int(item.get("after_steps", 0)):
+            probability = float(item.get("probability", item.get("prob", probability)))
+    return min(1.0, max(0.0, probability))
+
+def out_of_trajectory_threshold_for_step(
+    config: dict[str, Any], global_step: int, run_start_global_step: int
+) -> float:
+    exact = config.get("myoassist_exact", {})
+    threshold = float(exact.get("out_of_trajectory_threshold", 0.6))
+    schedule = exact.get("out_of_trajectory_threshold_schedule", [])
+    if not isinstance(schedule, list) or not schedule:
+        return threshold
+    schedule_step = int(global_step)
+    if str(config.get("out_of_trajectory_threshold_schedule_mode", "relative")) == "relative":
+        schedule_step = max(0, int(global_step) - int(run_start_global_step))
+    for item in sorted(schedule, key=lambda x: int(x.get("after_steps", 0))):
+        if schedule_step >= int(item.get("after_steps", 0)):
+            threshold = float(item.get("threshold", threshold))
+    return max(0.0, threshold)
+
+def apply_out_of_trajectory_threshold(
+    runner: MJWarpMuscleRunner, config: dict[str, Any], threshold: float
+) -> None:
+    value = max(0.0, float(threshold))
+    config.setdefault("myoassist_exact", {})["current_out_of_trajectory_threshold"] = value
+    runner.config.setdefault("myoassist_exact", {})["current_out_of_trajectory_threshold"] = value
+    runner.myoassist_out_of_trajectory_threshold = value
+
 def apply_episode_steps(runner: MJWarpMuscleRunner, config: dict[str, Any], episode_steps: int) -> None:
     steps = max(1, int(episode_steps))
     config.setdefault("reset", {})["episode_steps"] = steps
@@ -169,10 +209,31 @@ def update_sac_expert_once(
     max_grad_norm: float,
     human_anchor_actor: nn.Module | None = None,
     human_anchor_weight: float = 0.0,
+    human_prior_kl_weight: float = 0.0,
     muscle_count: int = 0,
+    anchor_action_dims: int = 0,
     actor_updates_enabled: bool = True,
+    alpha_updates_enabled: bool = True,
+    assistance_runtime: Any | None = None,
+    conditioner_optimizer: optim.Optimizer | None = None,
+    conditioner_anchor_weight: float = 0.0,
 ) -> dict[str, float]:
-    b_obs_raw, b_action, b_reward, b_next_obs_raw, b_done = replay.sample(batch_size)
+    if assistance_runtime is None:
+        b_obs_raw, b_action, b_reward, b_next_obs_raw, b_done = replay.sample(
+            batch_size
+        )
+        b_context = b_next_context = b_next_external_action = None
+    else:
+        (
+            b_obs_raw,
+            b_action,
+            b_reward,
+            b_next_obs_raw,
+            b_done,
+            b_context,
+            b_next_context,
+            b_next_external_action,
+        ) = replay.sample_with_assistance(batch_size)
     b_obs = obs_normalizer.normalize(b_obs_raw)
     b_next_obs = obs_normalizer.normalize(b_next_obs_raw)
     q_b_obs = mask_ref_obs_for_q(
@@ -187,6 +248,14 @@ def update_sac_expert_once(
     )
     with torch.no_grad():
         next_action, next_logprob = actor.get_action(b_next_obs)  # type: ignore[attr-defined]
+        if assistance_runtime is not None:
+            next_action = assistance_runtime.compose_action(
+                b_next_obs,
+                next_action,
+                b_next_context,
+                b_next_external_action,
+                muscle_count,
+            )
         target_q = torch.min(qf1_target(q_b_next_obs, next_action), qf2_target(q_b_next_obs, next_action))
         alpha = log_alpha.exp()
         next_q_value = b_reward + (1.0 - b_done) * gamma * (target_q - alpha * next_logprob)
@@ -199,24 +268,91 @@ def update_sac_expert_once(
     q_optimizer.step()
 
     pi, pi_logprob = actor.get_action(b_obs)  # type: ignore[attr-defined]
+    base_pi = pi
+    if assistance_runtime is not None:
+        pi = assistance_runtime.compose_action(
+            b_obs,
+            pi,
+            b_context,
+            b_action[:, muscle_count : muscle_count + 2].detach(),
+            muscle_count,
+        )
     min_q_pi = torch.min(qf1(q_b_obs, pi), qf2(q_b_obs, pi))
     alpha = log_alpha.exp().detach()
     sac_actor_loss = (alpha * pi_logprob - min_q_pi).mean()
     human_anchor_loss = torch.zeros((), dtype=torch.float32, device=b_obs.device)
-    if human_anchor_actor is not None and human_anchor_weight > 0.0 and muscle_count > 0:
+    human_prior_kl = torch.zeros((), dtype=torch.float32, device=b_obs.device)
+    conditioner_anchor_loss = torch.zeros(
+        (), dtype=torch.float32, device=b_obs.device
+    )
+    regularized_dims = max(
+        0,
+        min(
+            int(anchor_action_dims) if int(anchor_action_dims) > 0 else int(muscle_count),
+            int(base_pi.shape[1]),
+        ),
+    )
+    if human_anchor_actor is not None and human_anchor_weight > 0.0 and regularized_dims > 0:
         student_action, _ = actor.get_action(b_obs, deterministic=True)  # type: ignore[attr-defined]
         with torch.no_grad():
             anchor_action, _ = human_anchor_actor.get_action(b_obs, deterministic=True)  # type: ignore[attr-defined]
-        human_anchor_loss = F.mse_loss(student_action[:, :muscle_count], anchor_action[:, :muscle_count])
-    actor_loss = sac_actor_loss + float(human_anchor_weight) * human_anchor_loss
+        human_anchor_loss = F.mse_loss(
+            student_action[:, :regularized_dims],
+            anchor_action[:, :regularized_dims],
+        )
+    if human_anchor_actor is not None and human_prior_kl_weight > 0.0 and regularized_dims > 0:
+        current_mean, current_logstd = actor(b_obs)
+        with torch.no_grad():
+            prior_mean, prior_logstd = human_anchor_actor(b_obs)
+        current_mean = current_mean[:, :regularized_dims]
+        current_logstd = current_logstd[:, :regularized_dims]
+        prior_mean = prior_mean[:, :regularized_dims]
+        prior_logstd = prior_logstd[:, :regularized_dims]
+        variance_ratio = torch.exp(
+            2.0 * (prior_logstd - current_logstd)
+        )
+        mean_delta = torch.square(prior_mean - current_mean) * torch.exp(
+            -2.0 * current_logstd
+        )
+        human_prior_kl = 0.5 * torch.mean(
+            variance_ratio
+            + mean_delta
+            - 1.0
+            + 2.0 * (current_logstd - prior_logstd)
+        )
+    actor_loss = (
+        sac_actor_loss
+        + float(human_anchor_weight) * human_anchor_loss
+        + float(human_prior_kl_weight) * human_prior_kl
+    )
+    if conditioner_optimizer is not None:
+        conditioner_anchor_loss = assistance_runtime.conditioner_anchor_loss(
+            b_obs,
+            base_pi.detach(),
+            b_context,
+            muscle_count,
+        )
+        actor_loss = actor_loss + (
+            float(conditioner_anchor_weight) * conditioner_anchor_loss
+        )
     if actor_updates_enabled:
-        actor_optimizer.zero_grad()
+        policy_optimizer = (
+            conditioner_optimizer
+            if conditioner_optimizer is not None
+            else actor_optimizer
+        )
+        policy_optimizer.zero_grad()
         actor_loss.backward()
-        nn.utils.clip_grad_norm_(actor.parameters(), float(max_grad_norm))
-        actor_optimizer.step()
+        policy_parameters = (
+            assistance_runtime.conditioner.parameters()
+            if conditioner_optimizer is not None
+            else actor.parameters()
+        )
+        nn.utils.clip_grad_norm_(policy_parameters, float(max_grad_norm))
+        policy_optimizer.step()
 
     alpha_loss = -(log_alpha * (pi_logprob + target_entropy).detach()).mean()
-    if actor_updates_enabled:
+    if actor_updates_enabled and alpha_updates_enabled:
         alpha_optimizer.zero_grad()
         alpha_loss.backward()
         alpha_optimizer.step()
@@ -228,6 +364,8 @@ def update_sac_expert_once(
         "actor_loss": float(actor_loss.detach().item()),
         "sac_actor_loss": float(sac_actor_loss.detach().item()),
         "human_anchor_loss": float(human_anchor_loss.detach().item()),
+        "human_prior_kl": float(human_prior_kl.detach().item()),
+        "conditioner_anchor_loss": float(conditioner_anchor_loss.detach().item()),
         "alpha_loss": float(alpha_loss.detach().item()),
         "alpha": float(log_alpha.exp().detach().item()),
         "sample_logprob": float(pi_logprob.detach().mean().item()),
